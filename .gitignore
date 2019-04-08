@@ -13,3 +13,8 @@
 ### Bin/Build ###
 build/*
 bin/*
+
+
+### Project related ###
+tree.dot
+tree.pdf

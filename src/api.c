@@ -24,7 +24,9 @@ _Token *searchTree(void *start,char *name)
     {
         printf("FOUND %s of lenght %d\n", name, n->len);
         tok = (_Token *)malloc(sizeof(_Token));
+        if (tok == NULL) { printf("erreur malloc token\n"); exit(0); }
         tok->node = start;
+        tok->next = NULL;
     }
     end = tok;
 
@@ -33,20 +35,21 @@ _Token *searchTree(void *start,char *name)
     while (tmp != NULL)
     {
         it = searchTree(tmp, name);
-        /* on déplace end a la fin de la chaine */
-        if (end != NULL)
+        /* on insere les resultats en queue*/
+        if (tok != NULL && it != NULL)
         {
+            end->next = it;
+            end = it;
+        }
+        /* on cree la liste si elle est vide */
+        else if (it != NULL)
+        {
+            tok = it;
+            end = it;
             while (end->next != NULL)
             {
                 end = end->next;
             }
-            end->next = it;
-        }
-        /* on insere les resultats des fils a la suite */
-        else
-        {
-            tok = it;
-            end = tok;
         }
         tmp = tmp->brother;
     }

@@ -24,6 +24,9 @@ extern char subDelims[];
 /* taille du tableau subDelims */
 extern int nSubDelims;
 
+extern char headers[][32];
+extern int nbHeaders;
+
 
 
 /* initalise les attributs du node */
@@ -46,7 +49,7 @@ void setValues(Node *start);
 /* valide tous les fils du node n */
 int validateChildren(char **req, Node *n);
 /* valide tous les freres du node n (inclu) */
-int validateBrothers(char **req, Node *n);
+int validateBrothers(char **req, Node *n, int *len);
 /* valide tous les fils du node n, a partir du start-ieme (avec 0 on valide tout les fils) */
 int validateChildrenStartingFrom(char **req, Node *n, int start);
 
@@ -65,11 +68,130 @@ int validateSp(char **req, Node *n);
 int validateCrlf(char **req, Node *n);
 int validateDigit(char **req, Node *n);
 int validateCharacter(char **req, Node *n, char c);
+int validateOws(char **req, Node *n);
 
 /* vérifie si le char en argument est un tchar */
 int isTchar(char c);
+int isUnreserved(char c);
+int isSubDelims(char c);
 /* tente de lire un pchar dans la requete */
-int readPchar(char **req);
+int readPchar(char **req, int *len);
+
+// CHARLY //////////////////////////////////////////::
+int validateUri(char **req, Node *n);  ////
+int validateUriReference(char **req, Node *n);
+int validateRelativeRef(char **req, Node *n); ////
+int validatePath(char **req, Node *n);
+int validateFragment(char **req, Node *n);
+int validateUriHost(char **req, Node *n );
+int validateHierPart(char **req, Node *n);
+
+
+//tous les header
+int validateHeaderField(char **req, Node *n);
+int validateConnectionHeader(char **req, Node * n);
+int validateContentTypeHeader(char **req, Node * n);
+int validateContentTypeHeader(char **req, Node * n);
+int validateTrailerHeader(char **req, Node * n);
+int validateTransferEncodingHeader(char **req, Node *n );
+int validateUpgradeHeader(char **req, Node * n);
+int validateViaHeader(char **req, Node * n);
+int validateAgeHeader(char **req, Node * n);
+int validateExpiresHeader(char **req, Node *n );
+int validateDateHeader(char **req, Node * n);
+int validateLocationHeader(char **req, Node *n );
+int validateRetryAfterHeader(char **req, Node *n );
+int validateVaryHeader(char **req, Node * n);
+int validateWarningHeader(char **req, Node *n );
+int validateCacheControlHeader(char **req, Node *n );
+int validateExpectHeader(char **req, Node * n);
+int validateHostHeader(char **req, Node * n);
+int validateMaxForwardsHeader(char **req, Node *n );
+int validatePragmaHeader(char **req, Node * n);
+int validateRangeHeader(char **req, Node * n);
+int validateTEheader(char **req, Node * n);
+int validateIfMatchHeader(char **req, Node *n );
+int validateIfNoneMatchHeader(char **req, Node *n );
+int validateIfModifiedSinceHeader(char **req, Node *n );
+int validateIfUnmodifiedSinceHeader(char **req, Node *n );
+int validateIfRangeHeader(char **req, Node *n );
+int validateAcceptHeader(char **req, Node *n );
+int validateAcceptCharsetHeader(char **req, Node *n );
+int validateAcceptEncodingHeader(char **req, Node *n );
+int validateAcceptLanguageHeader(char **req, Node *n );
+int validateAuthorizationHeader(char **req, Node *n );
+int validateProxyAuthorizationHeader(char **req, Node *n);
+int validateUserAgentHeader(char **req, Node *n );
+int validateCookieHeader(char **req, Node *n );
+
+//les fonctions qui vérifient le nom des headers
+int validateConnectionStr(char **req, Node * n);
+int validateContentTypeStr(char **req, Node * n);
+int validateContentTypeStr(char **req, Node * n);
+int validateTrailerStr(char **req, Node * n);
+int validateTransferEncodingStr(char **req, Node *n );
+int validateUpgradeStr(char **req, Node * n);
+int validateViaStr(char **req, Node * n);
+int validateAgeStr(char **req, Node * n);
+int validateExpiresStr(char **req, Node *n );
+int validateDateStr(char **req, Node * n);
+int validateLocationStr(char **req, Node *n );
+int validateRetryAfterStr(char **req, Node *n );
+int validateVaryStr(char **req, Node * n);
+int validateWarningStr(char **req, Node *n );
+int validateCacheControlStr(char **req, Node *n );
+int validateExpectStr(char **req, Node * n);
+int validateHostStr(char **req, Node * n);
+int validateMaxForwardsStr(char **req, Node *n );
+int validatePragmaStr(char **req, Node * n);
+int validateRangeStr(char **req, Node * n);
+int validateTEStr(char **req, Node * n);
+int validateIfMatchStr(char **req, Node *n );
+int validateIfNoneMatchStr(char **req, Node *n );
+int validateIfModifiedSinceStr(char **req, Node *n );
+int validateIfUnmodifiedSinceStr(char **req, Node *n );
+int validateIfRangeStr(char **req, Node *n );
+int validateAcceptStr(char **req, Node *n );
+int validateAcceptCharsetStr(char **req, Node *n );
+int validateAcceptEncodingStr(char **req, Node *n );
+int validateAcceptLanguageStr(char **req, Node *n );
+int validateAuthorizationStr(char **req, Node *n );
+int validateProxyAuthorizationStr(char **req, Node *n);
+int validateUserAgentStr(char **req, Node *n );
+
+int validateCookieStr(char **req, Node *n ); // "Cookie"
+int validateCookieString(char **req, Node *n ); // cookie-string
+int validateCookiePair(char **req, Node *n);
+int validateCookieName(char **req, Node *n);
+int validateCookieOctet(char **req, Node *n);
+
+int validateRefererHeader(char **req, Node *n );
+int validateRefererStr(char **req, Node *n );
+int validateReferer(char **req, Node *n);
+int validateAbsoluteUri(char **req, Node *n);
+int validateAuthority(char **req, Node *n);
+int validateUserInfo(char **req, Node *n);
+int validateHost(char **req, Node *n);
+int validateIPliteral(char **req, Node *n);
+int validateIPv6address(char **req, Node *n);
+int validateH16(char **req, Node *n);
+int validateLS32(char **req, Node *n);
+int validateIPvFuture(char **req, Node *n);
+int validateIPv4address(char **req, Node *n);
+int validateDecOctet(char **req, Node *n);
+int validateRegName(char **req, Node *n);
+int validatePort(char **req, Node *n);
+int validatePathAbempty(char **req, Node *n);
+int validatePathAbsolute(char **req, Node *n);
+int validatePathRootless(char **req, Node *n);
+int validateSegmentNz(char **req, Node *n);
+int validateSegmentNzNc(char **req, Node *n);
+int validatePathEmpty(char **req, Node *n);
+int validatePartialUri(char **req, Node *n);
+int validateRelativePart(char **req, Node *n);
+int validatePathNoscheme(char **req, Node *n);
+
+
 
 /*********************************************/
 
