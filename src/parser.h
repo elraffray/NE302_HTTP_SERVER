@@ -69,6 +69,7 @@ int validateCrlf(char **req, Node *n);
 int validateDigit(char **req, Node *n);
 int validateCharacter(char **req, Node *n, char c);
 int validateOws(char **req, Node *n);
+int validateToken(char **req, Node *n);
 
 /* vérifie si le char en argument est un tchar */
 int isTchar(char c);
@@ -76,6 +77,9 @@ int isUnreserved(char c);
 int isSubDelims(char c);
 /* tente de lire un pchar dans la requete */
 int readPchar(char **req, int *len);
+
+int readString(char **req, char *s);
+
 
 // CHARLY //////////////////////////////////////////::
 int validateUri(char **req, Node *n);  ////
@@ -89,7 +93,6 @@ int validateHierPart(char **req, Node *n);
 
 //tous les header
 int validateHeaderField(char **req, Node *n);
-int validateConnectionHeader(char **req, Node * n);
 int validateContentTypeHeader(char **req, Node * n);
 int validateContentTypeHeader(char **req, Node * n);
 int validateTrailerHeader(char **req, Node * n);
@@ -104,7 +107,6 @@ int validateRetryAfterHeader(char **req, Node *n );
 int validateVaryHeader(char **req, Node * n);
 int validateWarningHeader(char **req, Node *n );
 int validateCacheControlHeader(char **req, Node *n );
-int validateExpectHeader(char **req, Node * n);
 int validateHostHeader(char **req, Node * n);
 int validateMaxForwardsHeader(char **req, Node *n );
 int validatePragmaHeader(char **req, Node * n);
@@ -115,7 +117,6 @@ int validateIfNoneMatchHeader(char **req, Node *n );
 int validateIfModifiedSinceHeader(char **req, Node *n );
 int validateIfUnmodifiedSinceHeader(char **req, Node *n );
 int validateIfRangeHeader(char **req, Node *n );
-int validateAcceptHeader(char **req, Node *n );
 int validateAcceptCharsetHeader(char **req, Node *n );
 int validateAcceptEncodingHeader(char **req, Node *n );
 int validateAcceptLanguageHeader(char **req, Node *n );
@@ -125,7 +126,6 @@ int validateUserAgentHeader(char **req, Node *n );
 int validateCookieHeader(char **req, Node *n );
 
 //les fonctions qui vérifient le nom des headers
-int validateConnectionStr(char **req, Node * n);
 int validateContentTypeStr(char **req, Node * n);
 int validateContentTypeStr(char **req, Node * n);
 int validateTrailerStr(char **req, Node * n);
@@ -140,7 +140,6 @@ int validateRetryAfterStr(char **req, Node *n );
 int validateVaryStr(char **req, Node * n);
 int validateWarningStr(char **req, Node *n );
 int validateCacheControlStr(char **req, Node *n );
-int validateExpectStr(char **req, Node * n);
 int validateHostStr(char **req, Node * n);
 int validateMaxForwardsStr(char **req, Node *n );
 int validatePragmaStr(char **req, Node * n);
@@ -151,7 +150,6 @@ int validateIfNoneMatchStr(char **req, Node *n );
 int validateIfModifiedSinceStr(char **req, Node *n );
 int validateIfUnmodifiedSinceStr(char **req, Node *n );
 int validateIfRangeStr(char **req, Node *n );
-int validateAcceptStr(char **req, Node *n );
 int validateAcceptCharsetStr(char **req, Node *n );
 int validateAcceptEncodingStr(char **req, Node *n );
 int validateAcceptLanguageStr(char **req, Node *n );
@@ -191,7 +189,45 @@ int validatePartialUri(char **req, Node *n);
 int validateRelativePart(char **req, Node *n);
 int validatePathNoscheme(char **req, Node *n);
 
+int validateConnectionHeader(char **req, Node * n);
+int validateConnectionStr(char **req, Node * n);
+int validateConnection(char **req, Node * n);
+int validateConnectionOption(char **req, Node * n);
 
+int validateAcceptHeader(char **req, Node *n );
+int validateAcceptStr(char **req, Node *n );
+int validateAccept(char **req, Node *n );
+int validateMediaRange(char **req, Node *n);
+int validateType(char **req, Node *n);
+int validateSubtype(char **req, Node *n);
+int validateParameter(char **req, Node *n);
+int validateQuotedString(char **req, Node *n);
+int validateQdText(char **req, Node *n);
+int validateQuotedPair(char **req, Node *n);
+int validateAcceptParams(char **req, Node *n);
+int validateWeight(char **req, Node *n);
+int validateQvalue(char **req, Node *n);
+int validateAcceptExt(char **req, Node *n);
+
+int validateExpectHeader(char **req, Node * n);
+int validateExpectStr(char **req, Node * n);
+int validateExpect(char **req, Node * n);
+
+int validateContentLengthHeader(char **req, Node * n);
+int validateContentLengthStr(char **req, Node * n);
+int validateContentLength(char **req, Node * n);
+
+int validateContentTypeHeader(char **req, Node * n);
+int validateContentTypeStr(char **req, Node * n);
+int validateContentType(char **req, Node * n);
+int validateMediaType(char **req, Node * n);
+
+int validateTransferEncodingHeader(char **req, Node * n);
+int validateTransferEncodingStr(char **req, Node * n);
+int validateTransferEncoding(char **req, Node * n);
+int validateTransferCoding(char **req, Node * n);
+int validateTransferExtension(char **req, Node * n);
+int validateTransferParameter(char **req, Node * n);
 
 /*********************************************/
 

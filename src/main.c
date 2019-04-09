@@ -7,7 +7,7 @@
 /// N'ajouter aucun autre code dans ce fichier.
 int main(int argc, char *argv[])
 {
-    char req[]="GET / HTTP/1.0\r\nReferer: https://developer.mozilla.org/en-US/docs/Web/JavaScript\r\n\r\n";
+    char req[]="GET / HTTP/1.0\r\nReferer: https://developer.mozilla.org/en-US/docs/Web/JavaScript\r\nCookie: yolo=\"swag\"\r\nAccept: text/html, application/xhtml+xml, application/xml;q=0.9, */*;q=0.8\r\nExpect: 100-continue\r\nConnection: keep-alive\r\nContent-Length: 1337\r\nContent-Type: text/html; charset=utf-8\r\nTransfer-Encoding: gzip\r\n\r\n";
     if (argc != 2 ) { printf("usage: %s <rulename>\n",argv[0]); return 0; }
     
     if (parseur(req,strlen(req))) {

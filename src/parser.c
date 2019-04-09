@@ -19,8 +19,8 @@ char subDelims[] = { '!', '$', '&', '\'', '(', ')', '*', '+', ',', ';', '='};
 /* taille du tableau subDelims */
 int nSubDelims = 11;
 
-char headers[][32] = {"Cookie-header", "Referer-header"};
-int nbHeaders = 2;
+char headers[][32] = {"Cookie-header", "Referer-header", "Accept-header", "Expect-header", "Connection-header", "Content-Length-header", "Content-Type-header", "Transfer-Encoding-header"};
+int nbHeaders = 8;
 
 void initNode(Node *slot, char *name)
 {
@@ -1548,6 +1548,921 @@ int validateSegmentNzNc(char **req, Node *n)
     return 0;
 }
 
+
+int validateAcceptHeader(char **req, Node *n )
+{
+    n->start = *req;
+    addChild(n, "accept-str");
+    addChild(n, ":");
+    addChild(n, "OWS");
+    addChild(n, "Accept");
+    addChild(n, "OWS");
+
+    if (!validateChildren(req, n))
+    {
+        deleteChildren(n);
+        return 0;
+    }
+    return 1;
+}
+
+/*  [ ( "," / ( media-range [ accept-params ] ) ) * ( OWS "," [ OWS ( media-range [ accept-params ] ) ] ) ] */
+int validateAccept(char **req, Node *n )
+{
+    int ind = 0, res = 1;
+    n->start = *req;
+
+    // ( "," / ( media-range [ accept-params ] ) )
+    addChild(n, ",");
+    if (!validateChildren(req, n))
+    {
+        deleteChildren(n);
+        addChild(n, "media-range");
+        if (!validateChildren(req, n))
+        {
+            deleteChildren(n);
+            return 0;
+        }
+        ind++;
+        addChild(n, "accept-params");
+        if (!validateChildrenStartingFrom(req, n, ind))
+        {
+            deleteChildrenFromIndex(n, ind);
+        }
+        else
+            ind++;
+    }
+    else
+        ind++;
+
+    // * ( OWS "," [ OWS ( media-range [ accept-params ] ) ] )
+    do
+    {
+        addChild(n, "OWS");
+        addChild(n, ",");
+        if (!validateChildrenStartingFrom(req, n, ind))
+        {
+            deleteChildrenFromIndex(n, ind);
+            res = 0;
+        }
+        else
+        {
+            res = 1;
+            ind += 2;
+            addChild(n, "OWS");
+            addChild(n, "media-range");
+            if (!validateChildrenStartingFrom(req, n, ind))
+            {
+                deleteChildrenFromIndex(n, ind);
+            }
+            else
+            {
+                ind += 2;
+                addChild(n, "accept-params");
+                if (!validateChildrenStartingFrom(req, n, ind))
+                {
+                    deleteChildrenFromIndex(n, ind);
+                }
+                else
+                    ind+=1;
+            }
+        } 
+    } while (res);
+
+    return 1;
+}
+
+
+int validateAcceptStr(char **req, Node *n )
+{
+    n->start = *req;
+    int i;
+    char *str = "Accept";
+    
+    for (i = 0; i < strlen(str); i++)
+    {
+        if (**req != str[i])
+        {
+            *req = n->start;
+            n->len = 0;
+            return 0;
+        }
+        (*req)++;
+    }
+    n->len = strlen(str);
+    return 1;
+
+}
+
+//  ( "*/*" / ( type "/" subtype ) / ( type "/*" ) ) * ( OWS ";" OWS parameter )
+int validateMediaRange(char **req, Node *n)
+{
+    int ind = 0;
+    n->start = *req;
+
+    // "*/*"
+    addChild(n, "*");
+    addChild(n, "/");
+    addChild(n, "*");
+    if (!validateChildren(req, n))
+    {
+        // ( type "/" subtype )
+        deleteChildren(n);
+        addChild(n, "type");
+        addChild(n, "/");
+        addChild(n, "subtype");
+        if (!validateChildren(req, n))
+        {
+            // ( type "/*" ) 
+            deleteChildren(n);
+            addChild(n, "type");
+            addChild(n, "/");
+            addChild(n, "*");
+            if (!validateChildren(req, n))
+            {
+                deleteChildren(n);
+                return 0;
+            }
+            else
+            {
+                ind += 3;
+            }
+        }
+        else
+            ind += 3;
+    }
+    else
+        ind += 3;
+
+    // * ( OWS ";" OWS parameter )
+    addChild(n, "OWS");
+    addChild(n, ";");
+    addChild(n, "OWS");
+    addChild(n, "parameter");
+    while (validateChildrenStartingFrom(req, n, ind))
+    {
+        ind += 4;
+        addChild(n, "OWS");
+        addChild(n, ";");
+        addChild(n, "OWS");
+        addChild(n, "parameter");
+    }
+    return 1;
+}
+
+// token
+int validateType(char **req, Node *n)
+{
+    n->start = *req;
+    addChild(n, "token");
+    if (!validateChildren(req, n))
+    {
+        deleteChildren(n);
+        return 0;
+    }
+    return 1;
+
+}
+
+// token
+int validateSubtype(char **req, Node *n)
+{
+    n->start = *req;
+    addChild(n, "token");
+    if (!validateChildren(req, n))
+    {
+        deleteChildren(n);
+        return 0;
+    }
+    return 1;
+}
+
+// token "=" ( token / quoted-string )
+int validateParameter(char **req, Node *n)
+{
+    int ind = 0;
+    n->start = *req;
+    addChild(n, "token");
+    addChild(n, "=");
+    if (!validateChildren(req, n))
+    {
+        deleteChildren(n);
+        return 0;
+    }
+    ind += 2;
+    
+    addChild(n, "token");
+    if (!validateChildrenStartingFrom(req, n, ind))
+    {
+        deleteChildrenFromIndex(n, ind);
+        addChild(n, "quoted-string");
+        if (!validateChildrenStartingFrom(req, n, ind))
+        {
+            deleteChildren(n);
+            return 0;
+        }
+    }
+    return 1;
+}
+
+//  DQUOTE * ( qdtext / quoted-pair ) DQUOTE
+int validateQuotedString(char **req, Node *n)
+{
+    int ind = 0, res = 1;
+    n->start = *req;
+
+    addChild(n, "\"");
+    if (!validateChildren(req, n))
+    {
+        deleteChildren(n);
+        return 0;
+    }
+    ind += 1;
+    do
+    {
+        addChild(n, "qdtext");
+        res = validateChildrenStartingFrom(req, n, ind);
+        if (!res)
+        {
+            deleteChildrenFromIndex(n, ind);
+            addChild(n, "quoted-pair");
+            if (!validateChildrenStartingFrom(req, n, ind))
+            {
+                deleteChildrenFromIndex(n, ind);
+                res = 0;
+            }
+            else
+                ind++;
+        }
+        else
+            ind++;
+
+    } while (res);
+
+    addChild(n, "\"");
+    if (!validateChildrenStartingFrom(req, n, ind))
+    {
+        deleteChildren(n);
+        return 0;
+    }
+    return 1;
+}
+
+// HTAB / SP / "!" / %x23-5B / %x5D-7E / obs-text
+int validateQdText(char **req, Node *n)
+{
+    n->start = *req;
+    if (**req == '\t' || **req == ' ' || **req == '!' || (**req >= 35 && **req <= 91) || (**req >= 93 && **req <= 126) || (**req >= 128 && **req <= 255))
+    {
+        n->len++;
+        return 1;
+    }
+    return 0;
+}
+
+//  "\" ( HTAB / SP / VCHAR / obs-text )
+int validateQuotedPair(char **req, Node *n)
+{
+    n->start = *req;
+    if (**req != '\\')
+        return 0;
+    n->len++;
+
+    if (**req == '\t' || **req == ' ' || (**req >= 33 && **req <= 126) || (**req >= 128 && **req <= 255))
+    {
+        n->len++;
+        return 1;
+    }
+    return 0;
+}
+
+// weight * accept-ext
+int validateAcceptParams(char **req, Node *n)
+{
+    int ind = 0;
+    n->start = *req;
+
+    addChild(n, "weight");
+    if (!validateChildren(req, n))
+    {
+        deleteChildren(n);
+        return 0;
+    }
+    ind++;
+    addChild(n, "accept-ext");
+    while (validateChildrenStartingFrom(req, n, ind))
+    {
+        ind++;
+        addChild(n, "accept-ext");
+    }
+
+    return 1;
+}
+
+// OWS ";" OWS "q=" qvalue
+int validateWeight(char **req, Node *n)
+{
+    n->start = *req;
+    
+    addChild(n, "OWS");
+    addChild(n, ";");
+    addChild(n, "OWS");
+    addChild(n, "q");
+    addChild(n, "=");
+    addChild(n, "qvalue");
+
+    if (!validateChildren(req, n))
+    {
+        deleteChildren(n);
+        return 0;
+    }
+    return 1;
+}
+
+// ( "0" [ "." *3 DIGIT ] ) / ( "1" [ "." *3 "0" ] )
+int validateQvalue(char **req, Node *n)
+{
+    int i;
+    n->start = *req;
+    if (**req == '0')
+    {
+        (*req)++;
+        n->len++;
+        if (**req == '.')
+        {
+            (*req)++;
+            n->len++;
+            for (i = 0; i < 3; i++)
+            {
+                if (isdigit(**req))
+                {
+                    (*req)++;
+                    n->len++;
+                }
+            }
+            return 1;
+        }
+    }
+    else if (**req == '1')
+    {
+        (*req)++;
+        n->len++;
+        if (**req == '.')
+        {
+            (*req)++;
+            n->len++;
+            for (i = 0; i < 3; i++)
+            {
+                if (**req == '0')
+                {
+                    (*req)++;
+                    n->len++;
+                }
+            }
+            return 1;
+        }
+    }
+    return 0;
+}
+
+// OWS ";" OWS token [ "=" ( token / quoted-string ) ]
+int validateAcceptExt(char **req, Node *n)
+{
+    int ind = 0;
+    n->start = *req;
+
+    addChild(n, "OWS");
+    addChild(n, ";");
+    addChild(n, "OWS");
+    addChild(n, "token");
+
+    if (!validateChildren(req, n))
+    {
+        deleteChildren(n);
+        return 0;
+    }
+    ind += 4;
+
+    addChild(n, "=");
+    if (validateChildrenStartingFrom(req, n, ind))
+    {
+        ind++;
+        addChild(n, "token");
+        if (validateChildrenStartingFrom(req, n, ind))
+            return 1;
+        deleteChildrenFromIndex(n, ind);
+        addChild(n, "quoted-string");
+        if (validateChildrenStartingFrom(req, n, ind))
+            return 1;
+        deleteChildrenFromIndex(n, ind);
+        return 0;
+    }
+    deleteChildrenFromIndex(n, ind);
+    return 1;
+
+}
+
+
+int validateExpectHeader(char **req, Node * n)
+{
+    n->start = *req;
+    addChild(n, "expect-str");
+    addChild(n, ":");
+    addChild(n, "OWS");
+    addChild(n, "Expect");
+    addChild(n, "OWS");
+
+    if (!validateChildren(req, n))
+    {
+        deleteChildren(n);
+        return 0;
+    }
+    return 1;
+}
+
+
+int validateExpectStr(char **req, Node * n)
+{
+    n->start = *req;
+    int i;
+    char *str = "Expect";
+    
+    for (i = 0; i < strlen(str); i++)
+    {
+        if (**req != str[i])
+        {
+            *req = n->start;
+            n->len = 0;
+            return 0;
+        }
+        (*req)++;
+    }
+    n->len = strlen(str);
+    return 1;
+}
+
+int validateExpect(char **req, Node * n)
+{
+    n->start = *req;
+    int i;
+    char *str = "100-continue";
+    
+    for (i = 0; i < strlen(str); i++)
+    {
+        if (**req != str[i])
+        {
+            *req = n->start;
+            n->len = 0;
+            return 0;
+        }
+        (*req)++;
+    }
+    n->len = strlen(str);
+    return 1;
+}
+
+
+
+int validateConnectionHeader(char **req, Node * n)
+{
+    n->start = *req;
+    addChild(n, "connection-str");
+    addChild(n, ":");
+    addChild(n, "OWS");
+    addChild(n, "Connection");
+    addChild(n, "OWS");
+
+    if (!validateChildren(req, n))
+    {
+        deleteChildren(n);
+        return 0;
+    }
+    return 1;
+}
+
+int validateConnectionStr(char **req, Node * n)
+{
+    n->start = *req;
+    int i;
+    char *str = "Connection";
+    
+    for (i = 0; i < strlen(str); i++)
+    {
+        if (**req != str[i])
+        {
+            *req = n->start;
+            n->len = 0;
+            return 0;
+        }
+        (*req)++;
+    }
+    n->len = strlen(str);
+    return 1;
+}
+
+// * ( "," OWS ) connection-option * ( OWS "," [ OWS connection-option ] )
+int validateConnection(char **req, Node * n)
+{
+    int ind = 0, res = 1;
+    n->start = *req;
+    
+    addChild(n, ",");
+    addChild(n, "OWS");
+    while (validateChildrenStartingFrom(req, n, ind))
+    {
+        ind += 2;
+        addChild(n, ",");
+        addChild(n, "OWS");
+    }
+    deleteChildrenFromIndex(n, ind);
+
+    addChild(n, "connection-option");
+    if (!validateChildrenStartingFrom(req, n, ind))
+    {
+        deleteChildrenFromIndex(n, ind);
+        return 0;
+    }
+    ind++;
+
+    do
+    {
+        addChild(n, "OWS");
+        addChild(n, ",");
+        if (!validateChildrenStartingFrom(req, n, ind))
+        {
+            deleteChildrenFromIndex(n, ind);
+            res = 0;
+        }
+        else
+        {
+            ind+= 2;
+            addChild(n, "OWS");
+            addChild(n, "connection-option");
+            if (!validateChildrenStartingFrom(req, n, ind))
+                deleteChildrenFromIndex(n, ind);
+        }
+
+
+    } while (res);
+    
+    return 1;
+
+}
+
+int validateConnectionOption(char **req, Node * n)
+{
+    n->start = *req;
+    addChild(n, "token");
+    if (!validateChildren(req, n))
+    {
+        deleteChildren(n);
+        return 0;
+    }
+    return 1;
+}
+
+
+int validateContentLengthHeader(char **req, Node * n)
+{
+    n->start = *req;
+    addChild(n, "content-length-str");
+    addChild(n, ":");
+    addChild(n, "OWS");
+    addChild(n, "Content-Length");
+    addChild(n, "OWS");
+
+    if (!validateChildren(req, n))
+    {
+        deleteChildren(n);
+        return 0;
+    }
+    return 1;
+}
+
+int validateContentLengthStr(char **req, Node * n)
+{
+    n->start = *req;
+    int i;
+    char *str = "Content-Length";
+    for (i = 0; i < strlen(str); i++)
+    {
+        if (**req != str[i])
+        {
+            *req = n->start;
+            n->len = 0;
+            return 0;
+        }
+        (*req)++;
+    }
+    n->len = strlen(str);
+    return 1;
+}
+
+// 1* digit
+int validateContentLength(char **req, Node * n)
+{
+    n->start = *req;
+    if (isdigit(**req))
+    {
+        (*req)++;
+        n->len++;
+        while (isdigit(**req))
+        {
+            (*req)++;
+            n->len++;
+        }
+        return 1;
+    }
+        printf("here\n");
+    return 0;
+}
+
+
+int validateContentTypeHeader(char **req, Node * n)
+{
+    n->start = *req;
+    addChild(n, "content-type-str");
+    addChild(n, ":");
+    addChild(n, "OWS");
+    addChild(n, "Content-Type");
+    addChild(n, "OWS");
+
+    if (!validateChildren(req, n))
+    {
+        deleteChildren(n);
+        return 0;
+    }
+    return 1;
+}
+
+int validateContentTypeStr(char **req, Node * n)
+{
+    n->start = *req;
+    int i;
+    char *str = "Content-Type";
+    for (i = 0; i < strlen(str); i++)
+    {
+        if (**req != str[i])
+        {
+            *req = n->start;
+            n->len = 0;
+            return 0;
+        }
+        (*req)++;
+    }
+    n->len = strlen(str);
+    return 1;
+}
+
+// media-type
+int validateContentType(char **req, Node * n)
+{
+    n->start = *req;
+
+    addChild(n, "media-type");
+    if (!validateChildren(req, n))
+    {
+        deleteChildren(n);
+        return 0;
+    }
+    return 1;
+}
+
+//  type "/" subtype * ( OWS ";" OWS parameter )
+int validateMediaType(char **req, Node * n)
+{
+    int ind = 0;
+    n->start = *req;
+
+    addChild(n, "type");
+    addChild(n, "/");
+    addChild(n, "subtype");
+
+    if (!validateChildren(req, n))
+    {
+        deleteChildren(n);
+        return 0;
+    }
+    ind += 3;
+
+    addChild(n, "OWS");
+    addChild(n, ";");
+    addChild(n, "OWS");
+    addChild(n, "parameter");
+    while (validateChildrenStartingFrom(req, n, ind))
+    {
+        ind += 4;
+        addChild(n, "OWS");
+        addChild(n, ";");
+        addChild(n, "OWS");
+        addChild(n, "parameter");
+    }
+    deleteChildrenFromIndex(n, ind);
+    return 1;
+    
+}
+
+int validateTransferEncodingHeader(char **req, Node * n)
+{
+    n->start = *req;
+    addChild(n, "transfer-encoding-str");
+    addChild(n, ":");
+    addChild(n, "OWS");
+    addChild(n, "Transfer-Encoding");
+    addChild(n, "OWS");
+
+    if (!validateChildren(req, n))
+    {
+        deleteChildren(n);
+        return 0;
+    }
+    return 1;
+}
+
+int validateTransferEncodingStr(char **req, Node * n)
+{
+    n->start = *req;
+    int i;
+    char *str = "Transfer-Encoding";
+    for (i = 0; i < strlen(str); i++)
+    {
+        if (**req != str[i])
+        {
+            *req = n->start;
+            n->len = 0;
+            return 0;
+        }
+        (*req)++;
+    }
+    n->len = strlen(str);
+    return 1;
+}
+
+// * ( "," OWS ) transfer-coding * ( OWS "," [ OWS transfer-coding ] )
+int validateTransferEncoding(char **req, Node * n)
+{
+    int ind = 0, res = 1;
+    n->start = *req;
+
+    addChild(n, ",");
+    addChild(n, "OWS");
+    while (validateChildrenStartingFrom(req, n, ind))
+    {
+        ind += 2;
+        addChild(n, ",");
+        addChild(n, "OWS");
+    }
+    deleteChildrenFromIndex(n, ind);
+
+    addChild(n, "transfer-coding");
+    if (!validateChildrenStartingFrom(req, n, ind))
+    {
+        deleteChildren(n);
+        return 0;
+    }
+    ind++;
+    do
+    {
+        addChild(n, "OWS");
+        addChild(n, ",");
+        if (!validateChildrenStartingFrom(req, n, ind))
+        {
+            deleteChildrenFromIndex(n, ind);
+            res = 0;
+        }
+        else
+        {
+            res = 1;
+            ind += 2;
+            addChild(n, "OWS");
+            addChild(n, "transfer-coding");
+            if (!validateChildrenStartingFrom(req, n, ind))
+                deleteChildrenFromIndex(n, ind);
+            else
+                ind += 2;
+        }
+    } while (res);
+    
+    return 1;
+}
+
+
+// "chunked" / "compress" / "deflate" / "gzip" / transfer-extension
+int validateTransferCoding(char **req, Node * n)
+{
+    n->start = *req;
+
+    if (!readString(req, "chunked"))
+    {
+        n->len = 0;
+    }
+    else
+    {
+        n->len = strlen("chunked");
+        return 1;
+    }
+
+    if (!readString(req, "compress"))
+    {
+        n->len = 0;
+    }
+    else
+    {
+        n->len = strlen("compress");
+        return 1;
+    }
+    
+    if (!readString(req, "deflate"))
+    {
+        n->len = 0;
+    }
+    else
+    {
+        n->len = strlen("deflate");
+        return 1;
+    }
+    
+    if (!readString(req, "gzip"))
+    {
+        n->len = 0;
+    }
+    else
+    {
+        n->len = strlen("gzip");
+        return 1;
+    }
+    
+    addChild(n, "transfer-extension");
+    if (!validateChildrenStartingFrom(req, n, 0))
+    {
+        deleteChildren(n);
+        return 0;
+    }
+    return 1;
+}
+
+// token * ( OWS ";" OWS transfer-parameter )
+int validateTransferExtension(char **req, Node * n)
+{
+    int ind = 0;
+    n->start = *req;
+
+    addChild(n, "token");
+    if (!validateChildren(req, n))
+    {
+        deleteChildren(n);
+        return 0;
+    }
+    ind++;
+    addChild(n, "OWS");
+    addChild(n, ";");
+    addChild(n, "OWS");
+    addChild(n, "transfer-parameter");
+    while (validateChildrenStartingFrom(req, n, ind))
+    {
+        ind += 4;
+        addChild(n, "OWS");
+        addChild(n, ";");
+        addChild(n, "OWS");
+        addChild(n, "transfer-parameter");
+    }
+    deleteChildrenFromIndex(n, ind);
+    return 1;
+}
+
+//  token BWS "=" BWS ( token / quoted-string )
+int validateTransferParameter(char **req, Node * n)
+{
+    int ind = 0;
+    n->start = *req;
+    
+    addChild(n, "token");
+    addChild(n, "OWS");
+    addChild(n, "=");
+    addChild(n, "OWS");
+    if (!validateChildren(req, n))
+    {
+        deleteChildren(n);
+        return 0;
+    }
+    ind+=4;
+
+    addChild(n, "token");
+    if (!validateChildrenStartingFrom(req, n, ind))
+    {
+        deleteChildrenFromIndex(n, ind);
+        addChild(n, "quoted-string");
+        if (!validateChildrenStartingFrom(req, n, ind))
+        {
+            deleteChildrenFromIndex(n, ind);
+            return 0;
+        }
+        return 1;
+    }
+    return 1;
+
+}
+
 int validateSp(char **req, Node *n)
 {
     n->start = *req;
@@ -1611,6 +2526,24 @@ int validateOws(char **req, Node *n)
     return 1;
 }
 
+// 1*tchar
+int validateToken(char **req, Node *n)
+{
+    n->start = *req;
+    if (!isTchar(**req))
+        return 0;
+
+    (*req)++;
+    n->len++;
+    while(isTchar(**req))
+    {
+        (*req)++;
+        n->len++;
+    }
+
+    return 1;
+}
+
 
 
 int isTchar(char c)
@@ -1646,7 +2579,19 @@ int isSubDelims(char c)
     return 0;
 }
 
-
+int readString(char **req, char *s)
+{
+    int i;
+    for (i = 0; i < strlen(s); i++)
+    {
+        if (**req != s[i])
+        {
+            return 0;
+        }
+        (*req)++;
+    }
+    return 1;
+}
 
 /* pchar = unreserved / pct-encoded / sub-delims / ":" / "@" */
 int readPchar(char **req, int *len)
@@ -1969,6 +2914,146 @@ int(*getValidationFunction(Node *n))(char **req, Node *n)
     else if (strcmp(name, "relative-part") == 0)
     {
         return validateRelativePart;
+    }
+    else if (strcmp(name, "Accept-header") == 0)
+    {
+        return validateAcceptHeader;
+    }
+    else if (strcmp(name, "accept-str") == 0)
+    {
+        return validateAcceptStr;
+    }
+    else if (strcmp(name, "Accept") == 0)
+    {
+        return validateAccept;
+    }
+    else if (strcmp(name, "media-range") == 0)
+    {
+        return validateMediaRange;
+    }
+    else if (strcmp(name, "type") == 0)
+    {
+        return validateType;
+    }
+    else if (strcmp(name, "subtype") == 0)
+    {
+        return validateSubtype;
+    }
+    else if (strcmp(name, "parameter") == 0)
+    {
+        return validateParameter;
+    }
+    else if (strcmp(name, "quoted-string") == 0)
+    {
+        return validateQuotedString;
+    }
+    else if (strcmp(name, "qdtext") == 0)
+    {
+        return validateQdText;
+    }
+    else if (strcmp(name, "quoted-pair") == 0)
+    {
+        return validateQuotedPair;
+    }
+    else if (strcmp(name, "accept-params") == 0)
+    {
+        return validateAcceptParams;
+    }
+    else if (strcmp(name, "weight") == 0)
+    {
+        return validateWeight;
+    }
+    else if (strcmp(name, "qvalue") == 0)
+    {
+        return validateQvalue;
+    }
+    else if (strcmp(name, "accept-ext") == 0)
+    {
+        return validateAcceptExt;
+    }
+    else if (strcmp(name, "token") == 0)
+    {
+        return validateToken;
+    }
+    else if (strcmp(name, "Expect-header") == 0)
+    {
+        return validateExpectHeader;
+    }
+    else if (strcmp(name, "expect-str") == 0)
+    {
+        return validateExpectStr;
+    }
+    else if (strcmp(name, "Expect") == 0)
+    {
+        return validateExpect;
+    }
+    else if (strcmp(name, "Connection-header") == 0)
+    {
+        return validateConnectionHeader;
+    }
+    else if (strcmp(name, "connection-str") == 0)
+    {
+        return validateConnectionStr;
+    }
+    else if (strcmp(name, "Connection") == 0)
+    {
+        return validateConnection;
+    }
+    else if (strcmp(name, "connection-option") == 0)
+    {
+        return validateConnectionOption;
+    }
+    else if (strcmp(name, "Content-Length-header") == 0)
+    {
+        return validateContentLengthHeader;
+    }
+    else if (strcmp(name, "content-length-str") == 0)
+    {
+        return validateContentLengthStr;
+    }
+    else if (strcmp(name, "Content-Length") == 0)
+    {
+        return validateContentLength;
+    }
+    else if (strcmp(name, "Content-Type-header") == 0)
+    {
+        return validateContentTypeHeader;
+    }
+    else if (strcmp(name, "content-type-str") == 0)
+    {
+        return validateContentTypeStr;
+    }
+    else if (strcmp(name, "Content-Type") == 0)
+    {
+        return validateContentType;
+    }
+    else if (strcmp(name, "media-type") == 0)
+    {
+        return validateMediaType;
+    }
+    else if (strcmp(name, "Transfer-Encoding-header") == 0)
+    {
+        return validateTransferEncodingHeader;
+    }
+    else if (strcmp(name, "transfer-encoding-str") == 0)
+    {
+        return validateTransferEncodingStr;
+    }
+    else if (strcmp(name, "Transfer-Encoding") == 0)
+    {
+        return validateTransferEncoding;
+    }
+    else if (strcmp(name, "transfer-coding") == 0)
+    {
+        return validateTransferCoding;
+    }
+    else if (strcmp(name, "transfer-extension") == 0)
+    {
+        return validateTransferExtension;
+    }
+    else if (strcmp(name, "transfer-parameter") == 0)
+    {
+        return validateTransferParameter;
     }
 
     printf("validation function for %s not found.\n", n->ruleName);
