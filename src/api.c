@@ -22,7 +22,7 @@ _Token *searchTree(void *start,char *name)
     /* on regarde le noeud courant */
     if (strcmp(n->ruleName, name) == 0)
     {
-        printf("FOUND %s of lenght %d\n", name, n->len);
+        //printf("FOUND %s of lenght %d\n", name, n->len);
         tok = (_Token *)malloc(sizeof(_Token));
         if (tok == NULL) { printf("erreur malloc token\n"); exit(0); }
         tok->node = start;

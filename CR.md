@@ -1,3 +1,5 @@
+
+Voici la structure choisie pour représenter un noeud de l'arbre:
 ```c
 typedef struct node
 {
@@ -10,12 +12,15 @@ typedef struct node
 } Node;
 ```
 
-Chaque noeud de l'arbre sera représenté par un Node.  
-Processus de création/validation de l'arbre:
+Comme les noeuds peuvent avoir un nombre quelconque de fils, nous avons choisi d'implementer une liste chainée de frères (accessible par `brother`) pour chaque noeud.  
+Ainsi, pour un Node `n`, son premier fils se situe à `n.child`, et les fils suivants sont accessibles par la liste chainée `n.child.brother`.
+
+
+Processus de création/validation de l'arbre:  
 Pour pouvoir valider un noeud intermediaire:
 * Il créé ses fils
 * Il valide ses fils
-  * Si la validation réussi, tout va bien
+  * Si la validation réussie, tout va bien
   * Sinon, on supprime les fils de l'arbre
 
 
@@ -23,10 +28,9 @@ La validation est donc récursive, car la validation d'un noeud intermediaire en
 
 Cas particuliers a prendre en compte:
 * un fils non validé n'amene pas forcement a la suppression de tout ses freres.
-  Exemple: la validation de `* segment` ne dépend pas de la reussite de la validation de `segment`, car `*` implique 0 ou n répétitions. Dans notre architecture, il faudra juste supprimer le dernier fils qui n'aura pas été validé, pas tout les autres avant.
+  Exemple: la validation de `* segment` ne dépend pas de la reussite de la validation de `segment`, car `*` implique 0 ou n répétitions. Dans notre architecture, il faudra juste supprimer le/les derniers fils qui n'auraient pas été validés, pas tout les autres avant.
   
-
-Afin de simplifier l'architecture au maximum, nous avons créé les fonctions suivantes:
+Afin de simplifier l'utilisation de l'architecture au maximum, nous avons créé les fonctions suivantes:
 ```c 
 /* ajoute le node en queue de la liste chainee de fils de n */
 void addChild(Node *n, char *name);
@@ -64,4 +68,9 @@ int validateHttpVersion(char **req, Node *n)
 
 La fonction addChild complete la liste chainée de fils du Node n.
 Ainsi pour valider un noeud, on ajoute tout ses fils, qui seront validés par la méthode  `validateChildren`.
+
+De cette façon, la validation d'un noeud est juste la traduction en code de la grammaire. Toute la gestion des listes chainées, des attributs des noeuds, est cachée dans `validateChildren`.
+
+
+
 

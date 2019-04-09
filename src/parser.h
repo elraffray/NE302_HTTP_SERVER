@@ -87,7 +87,6 @@ int validateUriReference(char **req, Node *n);
 int validateRelativeRef(char **req, Node *n); ////
 int validatePath(char **req, Node *n);
 int validateFragment(char **req, Node *n);
-int validateUriHost(char **req, Node *n );
 int validateHierPart(char **req, Node *n);
 
 
@@ -107,7 +106,6 @@ int validateRetryAfterHeader(char **req, Node *n );
 int validateVaryHeader(char **req, Node * n);
 int validateWarningHeader(char **req, Node *n );
 int validateCacheControlHeader(char **req, Node *n );
-int validateHostHeader(char **req, Node * n);
 int validateMaxForwardsHeader(char **req, Node *n );
 int validatePragmaHeader(char **req, Node * n);
 int validateRangeHeader(char **req, Node * n);
@@ -140,7 +138,6 @@ int validateRetryAfterStr(char **req, Node *n );
 int validateVaryStr(char **req, Node * n);
 int validateWarningStr(char **req, Node *n );
 int validateCacheControlStr(char **req, Node *n );
-int validateHostStr(char **req, Node * n);
 int validateMaxForwardsStr(char **req, Node *n );
 int validatePragmaStr(char **req, Node * n);
 int validateRangeStr(char **req, Node * n);
@@ -228,6 +225,38 @@ int validateTransferEncoding(char **req, Node * n);
 int validateTransferCoding(char **req, Node * n);
 int validateTransferExtension(char **req, Node * n);
 int validateTransferParameter(char **req, Node * n);
+
+int validateHostHeader(char **req, Node * n);
+int validateHostStr(char **req, Node * n);
+int validateHost2(char **req, Node * n);
+int validateUriHost(char **req, Node * n);
+
+int validateAcceptCharsetHeader(char **req, Node * n);
+int validateAcceptCharsetStr(char **req, Node * n);
+int validateAcceptCharset(char **req, Node * n);
+int validateCharset(char **req, Node * n);
+
+int validateAcceptLanguageHeader(char **req, Node * n);
+int validateAcceptLanguageStr(char **req, Node * n);
+int validateAcceptLanguage(char **req, Node * n);
+int validateAcceptLanguageRange(char **req, Node * n);
+
+int validateAcceptEncodingHeader(char **req, Node * n);
+int validateAcceptEncodingStr(char **req, Node * n);
+int validateAcceptEncoding(char **req, Node * n);
+int validateCodings(char **req, Node * n);
+int validateContentCoding(char **req, Node * n);
+int validateIdentityStr(char **req, Node * n);
+
+int validateUserAgentHeader(char **req, Node *n);
+int validateUserAgent(char **req, Node *n);
+int validateUserAgentStr(char **req, Node *n);
+int validateComment(char **req, Node *n);
+int validateCtext(char **req, Node *n);
+int validateProduct(char **req, Node *n);
+int validateProductVersion(char **req, Node *n);
+int validateRWS(char **req, Node *n);
+
 
 /*********************************************/
 

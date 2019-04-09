@@ -19,8 +19,8 @@ char subDelims[] = { '!', '$', '&', '\'', '(', ')', '*', '+', ',', ';', '='};
 /* taille du tableau subDelims */
 int nSubDelims = 11;
 
-char headers[][32] = {"Cookie-header", "Referer-header", "Accept-header", "Expect-header", "Connection-header", "Content-Length-header", "Content-Type-header", "Transfer-Encoding-header"};
-int nbHeaders = 8;
+char headers[][32] = {"Cookie-header", "Referer-header", "Accept-header", "Expect-header", "Connection-header", "Content-Length-header", "Content-Type-header", "Transfer-Encoding-header", "Host-header", "Accept-Charset-header", "Accept-Language-header", "Accept-Encoding-header", "User-Agent-header"};
+int nbHeaders = 13;
 
 void initNode(Node *slot, char *name)
 {
@@ -340,6 +340,7 @@ int validateHeaderField(char **req, Node *n)
         if (validateChildren(req, n))
             return 1;
         deleteChildren(n);
+        *req = n->start;
     }
     return 0;
 }
@@ -1344,8 +1345,11 @@ int validateRegName(char **req, Node *n) // basically * pchar without ":" and "@
 int validatePort(char **req, Node *n)
 {
     n->start = *req;
-    while(isdigit(req))
+    while(isdigit(**req))
+    {
+        (*req)++;
         n->len++;
+    }
     return 1;
 }
 
@@ -1863,7 +1867,6 @@ int validateAcceptParams(char **req, Node *n)
 int validateWeight(char **req, Node *n)
 {
     n->start = *req;
-    
     addChild(n, "OWS");
     addChild(n, ";");
     addChild(n, "OWS");
@@ -2463,6 +2466,698 @@ int validateTransferParameter(char **req, Node * n)
 
 }
 
+int validateHostHeader(char **req, Node * n)
+{
+    n->start = *req;
+    addChild(n, "host-str");
+    addChild(n, ":");
+    addChild(n, "OWS");
+    addChild(n, "Host");
+    addChild(n, "OWS");
+
+    if (!validateChildren(req, n))
+    {
+        deleteChildren(n);
+        return 0;
+    }
+
+    return 1;
+}
+
+
+int validateHostStr(char **req, Node * n)
+{
+    n->start = *req;
+    if (readString(req, "Host"))
+    {
+        n->len += 4;
+        return 1;
+    }
+    return 0;
+
+}
+
+// uri-host [ ":" port ]
+int validateHost2(char **req, Node * n)
+{
+    int ind = 0;
+    n->start = *req;
+    addChild(n, "uri-host");
+    if (!validateChildren(req, n))
+    {
+        deleteChildren(n);
+        return 0;
+    }
+    ind++;
+    addChild(n, ":");
+    addChild(n, "port");
+    if (!validateChildrenStartingFrom(req, n, ind))
+    {
+        deleteChildrenFromIndex(n, ind);
+    }
+    return 1;
+
+}
+
+//uri-host = host
+int validateUriHost(char **req, Node *n)
+{
+  n->start = *req;
+  addChild(n, "host");
+  if(!validateChildren(req,n)){
+    deleteChildren(n);
+    return 0;
+  }
+  return 1;
+}
+
+int validateAcceptCharsetHeader(char **req, Node * n)
+{
+    n->start = *req;
+    addChild(n, "accept-charset-str");
+    addChild(n, ":");
+    addChild(n, "OWS");
+    addChild(n, "Accept-Charset");
+    addChild(n, "OWS");
+
+    if (!validateChildren(req, n))
+    {
+        deleteChildren(n);
+        return 0;
+    }
+    return 1;
+}
+
+int validateAcceptCharsetStr(char **req, Node *n )
+{
+    n->start = *req;
+    if (readString(req, "Accept-Charset"))
+    {
+        n->len += strlen("Accept-Charset");
+        return 1;
+    }
+    return 0;
+
+}
+
+//  * ( "," OWS ) ( ( charset / "*" ) [ weight ] ) * ( OWS "," [ OWS ( ( charset / "*" ) [ weight ] ) ] )
+int validateAcceptCharset(char **req, Node *n)
+{
+    int ind = 0, res = 0;
+    n->start = *req;
+    // * ( "," OWS ) 
+    addChild(n, ",");
+    addChild(n, "OWS");
+    while (validateChildrenStartingFrom(req, n, ind))
+    {
+        ind+=2;
+        addChild(n, ",");
+        addChild(n, "OWS");
+    }
+    deleteChildrenFromIndex(n, ind);
+
+    // ( charset / "*" ) [ weight ]
+    addChild(n, "charset");
+    if (!validateChildrenStartingFrom(req, n, ind))
+    {
+        deleteChildrenFromIndex(n, ind);
+        addChild(n, "*");
+        if (!validateChildrenStartingFrom(req, n, ind))
+        {
+            deleteChildren(n);
+            return 0;
+        }
+        else
+            ind++;
+    }
+    else
+        ind++;
+    addChild(n, "weight");
+    if (!validateChildrenStartingFrom(req, n, ind))
+        deleteChildrenFromIndex(n, ind);
+    
+    // * ( OWS "," [ OWS ( ( charset / "*" ) [ weight ] ) ] )
+    res = 1;
+    do
+    {
+        addChild(n, "OWS");
+        addChild(n, ",");
+        if (validateChildrenStartingFrom(req, n, ind))
+        {
+            ind+=2;
+            addChild(n, "OWS");
+            if (!validateChildrenStartingFrom(req, n, ind))
+            {
+                deleteChildrenFromIndex(n, ind);
+                res = 0;
+            }
+            else
+            {
+                ind++;
+                addChild(n, "charset");
+                if (!validateChildrenStartingFrom(req, n, ind))
+                {
+                    deleteChildrenFromIndex(n, ind);
+                    addChild(n, "*");
+                    if (!validateChildrenStartingFrom(req, n, ind))
+                    {
+                        deleteChildrenFromIndex(n, ind);
+                        res = 0;
+                    }
+                    else
+                    {
+                        ind++;
+                        
+                    }
+
+                }
+                else
+                    ind++;
+                addChild(n, "weight");
+                if (!validateChildrenStartingFrom(req, n, ind))
+                {
+                    deleteChildrenFromIndex(n, ind);
+                }
+                else
+                    ind++;
+            }
+        }
+        else
+            res = 0;
+    } while (res);
+    return 1;
+
+}
+
+// token
+int validateCharset(char **req, Node * n)
+{
+    n->start = *req;
+    addChild(n, "token");
+    if (!validateChildren(req, n))
+    {
+        deleteChildren(n);
+        return 0;
+    }
+    return 1;
+}
+
+int validateAcceptLanguageHeader(char **req, Node * n)
+{
+    n->start = *req;
+    addChild(n, "accept-language-str");
+    addChild(n, ":");
+    addChild(n, "OWS");
+    addChild(n, "Accept-Language");
+    addChild(n, "OWS");
+
+    if (!validateChildren(req, n))
+    {
+        deleteChildren(n);
+        return 0;
+    }
+    return 1;
+}
+
+int validateAcceptLanguageStr(char **req, Node *n )
+{
+    n->start = *req;
+    if (readString(req, "Accept-Language"))
+    {
+        n->len += strlen("Accept-Language");
+        return 1;
+    }
+    return 0;
+
+}
+
+// ( 1*8 ALPHA * ( "-" 1*8 alphanum ) ) / "*"
+int validateAcceptLanguageRange(char **req, Node * n)
+{
+    int i;
+    n->start = *req;
+
+    if (**req == '*')
+    {
+        (*req)++;
+        n->len++;
+        return 1;
+    }
+    // 1*8 ALPHA
+    if (isalpha(**req))
+    {
+        (*req)++;
+        n->len++;
+        for (i=0; i < 7; i++)
+        {
+            if (isalpha(**req))
+            {
+                (*req)++;
+                n->len++;
+            }
+            else
+                break;
+        }
+    }
+    else
+        return 1;
+    while (**req == '-')
+    {
+        (*req)++;
+        n->len++;
+        if (isalnum(**req))
+        {
+            (*req)++;
+            n->len++;
+            for (i=0; i < 7; i++)
+            {
+                if (isalnum(**req))
+                {
+                    (*req)++;
+                    n->len++;
+                }
+                else
+                    break;
+            }
+        }
+        else
+        {
+            (*req)--;
+            n->len--;
+            break;
+        }
+
+    }
+    return 1;
+
+}
+
+ // * ( "," OWS ) ( language-range [ weight ] ) * ( OWS "," [ OWS ( language-range [ weight ] ) ] )
+int validateAcceptLanguage(char **req, Node *n )
+{
+    int ind = 0, res = 0;
+    n->start = *req;
+    // * ( "," OWS ) 
+    addChild(n, ",");
+    addChild(n, "OWS");
+    while (validateChildrenStartingFrom(req, n, ind))
+    {
+        ind+=2;
+        addChild(n, ",");
+        addChild(n, "OWS");
+    }
+    deleteChildrenFromIndex(n, ind);
+
+    // ( language-range [ weight ] )
+    addChild(n, "language-range");
+    if (!validateChildrenStartingFrom(req, n, ind))
+    {
+        deleteChildren(n);
+        return 0;
+    }
+    else
+        ind++;
+    addChild(n, "weight");
+    if (!validateChildrenStartingFrom(req, n, ind))
+        deleteChildrenFromIndex(n, ind);
+    
+    // * ( OWS "," [ OWS ( language-range [ weight ] ) ] )
+    res = 1;
+    do
+    {
+        addChild(n, "OWS");
+        addChild(n, ",");
+        if (validateChildrenStartingFrom(req, n, ind))
+        {
+            ind+=2;
+            addChild(n, "OWS");
+            if (!validateChildrenStartingFrom(req, n, ind))
+            {
+                deleteChildrenFromIndex(n, ind);
+                res = 0;
+            }
+            else
+            {
+                ind++;
+                addChild(n, "language-range");
+                if (!validateChildrenStartingFrom(req, n, ind))
+                {
+                    deleteChildrenFromIndex(n, ind);
+                    res = 0;
+                }
+                else
+                    ind++;
+                addChild(n, "weight");
+                if (!validateChildrenStartingFrom(req, n, ind))
+                {
+                    deleteChildrenFromIndex(n, ind);
+                }
+                else
+                    ind++;
+            }
+        }
+        else
+            res = 0;
+    } while (res);
+    return 1;
+}
+
+
+int validateAcceptEncodingHeader(char **req, Node * n){
+
+	n->start = *req;
+	addChild(n, "accept-encoding-str");
+	addChild(n, ":");
+	addChild(n, "OWS");
+	addChild(n, "Accept-Encoding");
+	addChild(n, "OWS");
+
+	if(!validateChildren(req, n)){
+		deleteChildren(n);
+		return 0;
+	}
+	return 1;
+}
+
+int validateAcceptEncodingStr(char **req, Node * n){
+
+	n->start = *req;
+	int i;
+	char *str = "Accept-Encoding";
+	for(i = 0; i < strlen(str); i++){
+		if(**req != str[i]){
+			*req = n->start;
+			n->len = 0;
+			return 0;
+		}
+		(*req)++;
+	}
+	n->len = strlen(str);
+	return 1;
+}
+// [ ( "," / ( codings [ weight ] ) ) * ( OWS "," [ OWS ( codings [ weight ] ) ] ) ] 
+int validateAcceptEncoding(char **req, Node * n){
+
+	int ind = 0, res = 1;
+	n->start = *req;
+
+	//( "," / ( codings [ weight ] ) )
+	addChild(n, ",");
+	if(!validateChildren(req, n)){
+
+		deleteChildren(n);
+		addChild(n, "codings");
+		if(!validateChildren(req, n)){
+
+			deleteChildren(n);
+			return 0;
+		}
+		ind++;
+
+		addChild(n, "weight");
+		if(!validateChildrenStartingFrom(req, n, ind)){
+			deleteChildrenFromIndex(n, ind);
+		}
+		else
+			ind++;
+	}
+	else
+		ind++;
+
+	// * ( OWS "," [ OWS ( codings [ weight ] ) ] ) ] 
+	do{
+
+		addChild(n, "OWS");
+		addChild(n, ",");
+		if(!validateChildrenStartingFrom(req, n, ind)){
+			deleteChildrenFromIndex(n, ind);
+			res = 0;
+		}
+		else{
+
+			res = 1;
+			ind += 2;
+			addChild(n, "OWS");
+			addChild(n, "codings");
+			if(!validateChildrenStartingFrom(req, n, ind)){
+				deleteChildrenFromIndex(n, ind);
+			}
+			else{
+
+				ind +=2;
+				addChild(n, "weight");
+				if(!validateChildrenStartingFrom(req, n, ind)){
+					deleteChildrenFromIndex(n, ind);
+				}
+				else
+					ind += 1;
+			}
+		}
+	} while(res);
+
+	return 1;
+}
+
+int validateCodings(char **req, Node * n){
+	n->start = *req;
+
+	addChild(n, "content-coding");
+	if(!validateChildren(req, n)){
+		deleteChildren(n);
+
+		addChild(n, "identity-str");
+		if(!validateChildren(req, n)){
+			deleteChildren(n);
+
+			addChild(n, "*");
+			if(!validateChildren(req, n)){
+				deleteChildren(n);
+			}
+			else
+				return 0;
+		}
+	}
+	return 1;
+}
+
+int validateContentCoding(char **req, Node * n){
+
+	n->start = *req;
+
+	addChild(n, "token");
+	if(!validateChildren(req, n)){
+		deleteChildren(n);
+		return 0;
+	}
+	return 1;
+}
+
+int validateIdentityStr(char **req, Node * n){
+
+	n->start = *req;
+	int i;
+	char *str = "identity";
+	for(i = 0; i < strlen(str); i++){
+		if(**req != str[i]){
+			*req = n->start;
+			n->len = 0;
+			return 0;
+		}
+		(*req)++;
+	}
+	n->len = strlen(str);
+	return 1;
+}
+
+int validateUserAgentHeader(char **req, Node *n)
+{
+  n->start = *req;
+  addChild(n, "user-agent-str");
+  addChild(n, ":");
+  addChild(n, "OWS");
+  addChild(n, "User-Agent");
+  addChild(n, "OWS");
+  if(!validateChildren(req,n))
+  {
+    deleteChildren(n);
+    return 0;
+  }
+  return 1;
+}
+
+int validateUserAgentStr(char **req, Node *n)
+{
+  n->start = *req;
+  int i;
+  char *str = "User-Agent";
+  for(i=0;i<strlen(str);i++)
+  {
+    if(**req != str[i])
+    {
+      *req = n->start;
+      n->len = 0;
+      return 0;
+    }
+    (*req)++;
+  }
+  n->len = strlen(str);
+  return 1;
+}
+
+
+//User-Agent = product * ( RWS ( product / comment ) )
+int validateUserAgent(char **req, Node *n)
+{
+    n->start = *req;
+    int ind = 0;
+    int res = 1;
+    addChild(n, "product");
+    if(!validateChildren(req,n))
+    {
+        deleteChildren(n);
+        return 0;
+    }
+    ind++;
+
+    do
+    {
+        addChild(n, "RWS");
+        if (!validateChildrenStartingFrom(req, n, ind))
+        {
+            deleteChildrenFromIndex(n, ind);
+            break;
+        }
+        ind++;
+        addChild(n, "product");
+        res = validateChildrenStartingFrom(req, n, ind);
+        if (!res)
+        {
+            deleteChildrenFromIndex(n, ind);
+            addChild(n, "comment");
+            if (!validateChildrenStartingFrom(req, n, ind))
+            {
+                deleteChildrenFromIndex(n, ind);
+                res = 0;
+            }
+            else
+            {
+                ind++;
+                res = 1;
+            }
+        }
+        else
+            ind++;
+
+    } while (res);
+
+    return 1;
+
+}
+
+//product = token [ "/" product-version ]
+int validateProduct(char **req, Node *n)
+{
+  n->start = *req;
+  addChild(n, "token");
+  if(!validateChildren(req,n))
+  {
+    deleteChildren(n);
+    return 0;
+  }
+  addChild(n, "/");
+  addChild(n, "product-version");
+  if(!validateChildrenStartingFrom(req,n,1))
+  {
+    deleteChildrenFromIndex(n,1);
+  }
+  return 1;
+
+}
+
+
+//comment = "(" * ( ctext / quoted-pair / comment ) ")"
+int validateComment(char **req, Node *n)
+{
+    n->start = *req;
+    int ind = 0, res = 1;
+    if(**req != '(')
+    {
+        return 0;
+    }
+    (*req)++;
+    n->len++;
+    do
+    {
+        addChild(n, "ctext");
+        res = validateChildrenStartingFrom(req,n,ind);
+        if(!res)
+        {
+            deleteChildrenFromIndex(n,ind);
+            addChild(n, "quoted-pair");
+            if(!validateChildrenStartingFrom(req,n,ind))
+            {
+            deleteChildrenFromIndex(n,ind);
+            addChild(n, "comment");
+            if(!validateChildrenStartingFrom(req,n,ind))
+            {
+                deleteChildrenFromIndex(n, ind);
+                res = 0;
+            }
+            else ind++;
+            }
+            else ind ++;
+        }
+        else ind++;
+
+    } while(res);
+
+    addChild(n,")");
+    if(!validateChildrenStartingFrom(req,n,ind))
+    {
+    deleteChildren(n);
+    return 0;
+    }
+return 1;
+}
+
+//ctext = HTAB / SP / %x21-27 / %x2A-5B / %x5D-7E / obs-text
+int validateCtext(char **req, Node *n)
+{
+    n->start = *req;
+    if(**req == '\t' || **req == ' ' || (**req >= 33 && **req <= 39) || (**req >= 42 && **req <= 91) || (**req >= 93 && **req <= 126) || (**req >= 128 && **req <= 255))
+    {
+        (*req)++;
+        n->len++;
+        return 1;
+    }
+    return 0;
+}
+
+int validateRWS(char **req, Node *n)
+{
+    n->start = *req;
+    while (**req == ' ' || **req == '\t')
+    {
+        (*req)++;
+        n->len++;
+    }
+    return 1;
+}
+
+int validateProductVersion(char **req, Node *n)
+{
+  n->start = *req;
+  addChild(n, "token");
+  if(!validateChildren(req,n))
+  {
+    deleteChildren(n);
+    return 0;
+  }
+  return 1;
+}
+
+
+
 int validateSp(char **req, Node *n)
 {
     n->start = *req;
@@ -3054,6 +3749,110 @@ int(*getValidationFunction(Node *n))(char **req, Node *n)
     else if (strcmp(name, "transfer-parameter") == 0)
     {
         return validateTransferParameter;
+    }
+    else if (strcmp(name, "Host-header") == 0)
+    {
+        return validateHostHeader;
+    }
+    else if (strcmp(name, "host-str") == 0)
+    {
+        return validateHostStr;
+    }
+    else if (strcmp(name, "Host") == 0)
+    {
+        return validateHost2;
+    }
+    else if (strcmp(name, "uri-host") == 0)
+    {
+        return validateUriHost;
+    }
+    else if (strcmp(name, "Accept-Charset-header") == 0)
+    {
+        return validateAcceptCharsetHeader;
+    }
+    else if (strcmp(name, "accept-charset-str") == 0)
+    {
+        return validateAcceptCharsetStr;
+    }
+    else if (strcmp(name, "Accept-Charset") == 0)
+    {
+        return validateAcceptCharset;
+    }
+    else if (strcmp(name, "charset") == 0)
+    {
+        return validateCharset;
+    }
+    else if (strcmp(name, "Accept-Language-header") == 0)
+    {
+        return validateAcceptLanguageHeader;
+    }
+    else if (strcmp(name, "accept-language-str") == 0)
+    {
+        return validateAcceptLanguageStr;
+    }
+    else if (strcmp(name, "Accept-Language") == 0)
+    {
+        return validateAcceptLanguage;
+    }
+    else if (strcmp(name, "language-range") == 0)
+    {
+        return validateAcceptLanguageRange;
+    }
+    else if (strcmp(name, "Accept-Encoding-header") == 0)
+    {
+        return validateAcceptEncodingHeader;
+    }
+    else if (strcmp(name, "accept-encoding-str") == 0)
+    {
+        return validateAcceptEncodingStr;
+    }
+    else if (strcmp(name, "Accept-Encoding") == 0)
+    {
+        return validateAcceptEncoding;
+    }
+    else if (strcmp(name, "codings") == 0)
+    {
+        return validateCodings;
+    }
+    else if (strcmp(name, "content-coding") == 0)
+    {
+        return validateContentCoding;
+    }
+    else if (strcmp(name, "identity-str") == 0)
+    {
+        return validateIdentityStr;
+    }
+    else if (strcmp(name, "User-Agent-header") == 0)
+    {
+        return validateUserAgentHeader;
+    }
+    else if (strcmp(name, "user-agent-str") == 0)
+    {
+        return validateUserAgentStr;
+    }
+    else if (strcmp(name, "User-Agent") == 0)
+    {
+        return validateUserAgent;
+    }
+    else if (strcmp(name, "comment") == 0)
+    {
+        return validateComment;
+    }
+    else if (strcmp(name, "ctext") == 0)
+    {
+        return validateCtext;
+    }
+    else if (strcmp(name, "product") == 0)
+    {
+        return validateProduct;
+    }
+    else if (strcmp(name, "product-version") == 0)
+    {
+        return validateProductVersion;
+    }
+    else if (strcmp(name, "RWS") == 0)
+    {
+        return validateRWS;
     }
 
     printf("validation function for %s not found.\n", n->ruleName);

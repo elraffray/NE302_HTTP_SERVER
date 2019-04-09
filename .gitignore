@@ -13,7 +13,7 @@
 ### Bin/Build ###
 build/*
 bin/*
-
+tests/testFile/*
 
 ### Project related ###
 tree.dot
