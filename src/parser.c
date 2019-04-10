@@ -150,10 +150,10 @@ int validateHttpMessage(char **req, Node *n)
         ind+=2;
         addChild(n, "header-field");
         addChild(n, "CRLF");
-
     }
-    printf("No headers left.\n");
+
     deleteChildrenFromIndex(n, ind);
+
 
     addChild(n, "CRLF");
     if (!validateChildrenStartingFrom(req, n, ind))
@@ -376,13 +376,12 @@ int validateHeaderField(char **req, Node *n)
 {
     int i;
     n->start = *req;
-
     for (i = 0; i < nbHeaders; i++)
     {
         addChild(n, headers[i]);
         if (validateChildren(req, n))
         {
-            printf("Found %s\n", headers[i]);
+
             return 1;
         }
         deleteChildren(n);
@@ -396,9 +395,11 @@ int validateHeaderField(char **req, Node *n)
     addChild(n, "OWS");
     if (!validateChildren(req, n))
     {
+        *req = n->start;
         deleteChildren(n);
         return 0;
     }
+
     return 1;
 }
 
@@ -421,6 +422,7 @@ int validateFieldValue(char **req, Node *n)
 {
     int res = 1, ind = 0;
     n->start = *req;
+
     do
     {
         addChild(n, "field-content");
@@ -543,6 +545,8 @@ int validateCookieHeader(char **req, Node *n)
         deleteChildren(n);
         return 0;
     }
+
+
     return 1;
 }
 
@@ -609,27 +613,15 @@ int validateCookiePair(char **req, Node *n)
     return 1;
 }
 
-/* 1* tchar */ /* token */
+/* 1* tchar */ 
 int validateCookieName(char **req, Node *n)
 {
     n->start = *req;
-    char *it = *req;
-
-    /* on vérifie que le 1er charactere est bien un tchar */
-    if (!isTchar(*it))
-        return 0;
-    
-    it++;
-    n->len++;
-    while (*it != '\0')
+    addChild(n, "token");
+    if (!validateChildren(req, n))
     {
-        if (!isTchar(*it))
-        {
-            *req = it;
-            return 1;
-        }
-        it++;
-        n->len++;
+        deleteChildren(n);
+        return 0;
     }
     return 1;
 }
@@ -638,9 +630,10 @@ int validateCookieName(char **req, Node *n)
 int validateCookieValue(char **req, Node *n)
 {
     n->start = *req;
-    int ind = -1, dquote = 0;
+    int ind = 0, dquote = 0;
     Node *it;
     // on lit dquote
+
     addChild(n, "\"");
     if (!validateChildren(req, n))
         deleteChildren(n);
@@ -649,21 +642,17 @@ int validateCookieValue(char **req, Node *n)
         ind++;
         dquote = 1;
     }
-    
+
     // on lit n cookie-octet 
-    do
+    addChild(n, "cookie-octet");
+    while (validateChildrenStartingFrom(req, n, ind))
     {
-        addChild(n, "cookie-octet");
         ind++;
-    } while (validateChildrenStartingFrom(req, n, ind));
-    
-    it = n->child;
-    while (it != NULL)
-    {
-        it = it->brother;
+        addChild(n, "cookie-octet");
     }
     deleteChildrenFromIndex(n, ind);
     
+
     //on relit dquote si on l'avait lu au début
     if (dquote)
     {
@@ -686,20 +675,21 @@ int validateCookieValue(char **req, Node *n)
 int validateCookieOctet(char **req, Node *n)
 {
     unsigned char ureq = (unsigned char)**req;
+    
     n->start = *req;
-    if (ureq == 21)
+    if (ureq == 0x21)
     {
         (*req)++;
         n->len++;
         return 1;
     }
-    if (ureq >= 35 && ureq <= 43)
+    if (ureq >= 0x23 && ureq <= 0x2B)
     {
         (*req)++;
         n->len++;
         return 1;
     }
-    if (ureq >= 45 && ureq <= 58)
+    if (ureq >= 0x2D && ureq <= 0x3A)
     {
         (*req)++;
         n->len++;
@@ -724,6 +714,7 @@ int validateCookieOctet(char **req, Node *n)
 int validateRefererHeader(char **req, Node *n )
 {
     n->start = *req;
+
     addChild(n, "referer-str");
     addChild(n, ":");
     addChild(n, "OWS");
@@ -820,31 +811,24 @@ int validateHierPart(char **req, Node *n)
     addChild(n, "/");
     addChild(n, "/");
     addChild(n, "authority");
-    if (!validateChildren(req, n))
-    {
-        deleteChildren(n);
-        return 0;
-    }
-
     addChild(n, "path-abempty");
-    if (validateChildrenStartingFrom(req, n, 3))
+    if (validateChildren(req, n))
         return 1;
-    deleteChildrenFromIndex(n, 3);
-
+    deleteChildren(n);
     addChild(n, "path-absolute");
-    if (validateChildrenStartingFrom(req, n, 3))
+    if (validateChildren(req, n))
         return 1;
-    deleteChildrenFromIndex(n, 3);
+    deleteChildren(n);
     
     addChild(n, "path-rootless");
-    if (validateChildrenStartingFrom(req, n, 3))
+    if (validateChildren(req, n))
         return 1;
-    deleteChildrenFromIndex(n, 3);
+    deleteChildren(n);
     
     addChild(n, "path-empty");
-    if (validateChildrenStartingFrom(req, n, 3))
+    if (validateChildren(req, n))
         return 1;
-    deleteChildrenFromIndex(n, 3);
+    deleteChildren(n);
 
     return 0;
 
@@ -880,7 +864,6 @@ int validateAuthority(char **req, Node *n)
     if (!validateChildrenStartingFrom(req, n, ind))
     {
         deleteChildrenFromIndex(n, ind);
-        return 1;
     }
 
     return 1;
@@ -937,6 +920,7 @@ int validateIPliteral(char **req, Node *n)
         deleteChildren(n);
         return 0;
     }
+
     addChild(n, "IPv6address");
     if (!validateChildrenStartingFrom(req, n, 1))
     {
@@ -948,6 +932,7 @@ int validateIPliteral(char **req, Node *n)
             return 0;
         }
     }
+
     addChild(n, "]");
     if (validateChildrenStartingFrom(req, n, 2))
         return 1;
@@ -983,6 +968,7 @@ int validateIPv6address(char **req, Node *n)
     ind = 0;
     *req = n->start;
 
+
     // "::" 5 ( h16 ":" ) ls32
     addChild(n, ":");
     addChild(n, ":");
@@ -994,9 +980,10 @@ int validateIPv6address(char **req, Node *n)
             addChild(n, "h16");
             addChild(n, ":");
         }
-        if (validateChildren(req, n))
+        if (validateChildrenStartingFrom(req, n, ind))
         {
             ind += 10;
+
             addChild(n, "ls32");
             if (validateChildrenStartingFrom(req, n, ind))
                 return 1;
@@ -1037,17 +1024,24 @@ int validateIPv6address(char **req, Node *n)
     *req = n->start;
     
 
+
     // [ h16 *1 ( ":" h16 ) ] "::" 3 ( h16 ":" ) ls32
     addChild(n, "h16");
     if (!validateChildren(req, n))
         deleteChildren(n);
     else
     {
+        backup = *req;
+        backupLen = n->len;
         ind++;
+        addChild(n, ":");
         addChild(n, "h16");
-        addChild(n, "h:");
         if (!validateChildrenStartingFrom(req, n, ind))
+        {
             deleteChildrenFromIndex(n, ind);
+            *req = backup;
+            n->len = backupLen;
+        }
         else
             ind+=2;
     }
@@ -1082,11 +1076,15 @@ int validateIPv6address(char **req, Node *n)
         ind++;
         for (i = 0; i < 2; i++)
         {
+            backup = *req;
+            backupLen = n->len;
+            addChild(n, ":");
             addChild(n, "h16");
-            addChild(n, "h:");
             if (!validateChildrenStartingFrom(req, n, ind))
             {
                 deleteChildrenFromIndex(n, ind);
+                *req = backup;
+                n->len = backupLen;
                 break;
             }
             else
@@ -1125,11 +1123,15 @@ int validateIPv6address(char **req, Node *n)
         ind++;
         for (i = 0; i < 3; i++)
         {
+            backup = *req;
+            backupLen = n->len;
+            addChild(n, ":");
             addChild(n, "h16");
-            addChild(n, "h:");
             if (!validateChildrenStartingFrom(req, n, ind))
             {
                 deleteChildrenFromIndex(n, ind);
+                *req = backup;
+                n->len = backupLen;
                 break;
             }
             else
@@ -1156,18 +1158,23 @@ int validateIPv6address(char **req, Node *n)
         ind++;
         for (i = 0; i < 4; i++)
         {
+            backup = *req;
+            backupLen = n->len;
             addChild(n, ":");
             addChild(n, "h16");
             if (!validateChildrenStartingFrom(req, n, ind))
             {
                 deleteChildrenFromIndex(n, ind);
+                *req = backup;
+                n->len = backupLen;
                 break;
             }
             else
+            {
                 ind+=2;
+            }
         }
     }
-    printf("REQIP: %s\n", *req);
     addChild(n, ":");
     addChild(n, ":");
     addChild(n, "ls32");
@@ -1186,11 +1193,15 @@ int validateIPv6address(char **req, Node *n)
         ind++;
         for (i = 0; i < 5; i++)
         {
+            backup = *req;
+            backupLen = n->len;
+            addChild(n, ":");
             addChild(n, "h16");
-            addChild(n, "h:");
             if (!validateChildrenStartingFrom(req, n, ind))
             {
                 deleteChildrenFromIndex(n, ind);
+                *req = backup;
+                n->len = backupLen;
                 break;
             }
             else
@@ -1215,11 +1226,15 @@ int validateIPv6address(char **req, Node *n)
         ind++;
         for (i = 0; i < 6; i++)
         {
+            backup = *req;
+            backupLen = n->len;
+            addChild(n, ":");
             addChild(n, "h16");
-            addChild(n, "h:");
             if (!validateChildrenStartingFrom(req, n, ind))
             {
                 deleteChildrenFromIndex(n, ind);
+                *req = backup;
+                n->len = backupLen;
                 break;
             }
             else
@@ -1721,13 +1736,15 @@ int validateAcceptHeader(char **req, Node *n )
         deleteChildren(n);
         return 0;
     }
+
     return 1;
 }
 
 /*  [ ( "," / ( media-range [ accept-params ] ) ) * ( OWS "," [ OWS ( media-range [ accept-params ] ) ] ) ] */
 int validateAccept(char **req, Node *n )
 {
-    int ind = 0, res = 1;
+    int ind = 0, res = 1, backupLen;
+    char *backup;
     n->start = *req;
 
     // ( "," / ( media-range [ accept-params ] ) )
@@ -1741,11 +1758,16 @@ int validateAccept(char **req, Node *n )
             deleteChildren(n);
             return 0;
         }
+        backup = *req;
+        backupLen = n->len;
+
         ind++;
         addChild(n, "accept-params");
         if (!validateChildrenStartingFrom(req, n, ind))
         {
             deleteChildrenFromIndex(n, ind);
+            *req = backup;
+            n->len = backupLen;
         }
         else
             ind++;
@@ -1754,6 +1776,7 @@ int validateAccept(char **req, Node *n )
         ind++;
 
     // * ( OWS "," [ OWS ( media-range [ accept-params ] ) ] )
+
     do
     {
         addChild(n, "OWS");
@@ -1767,15 +1790,21 @@ int validateAccept(char **req, Node *n )
         {
             res = 1;
             ind += 2;
+            backup = *req;
+            backupLen = n->len;
             addChild(n, "OWS");
             addChild(n, "media-range");
             if (!validateChildrenStartingFrom(req, n, ind))
             {
                 deleteChildrenFromIndex(n, ind);
+                *req = backup;
+                n->len = backupLen;
+
             }
             else
             {
                 ind += 2;
+
                 addChild(n, "accept-params");
                 if (!validateChildrenStartingFrom(req, n, ind))
                 {
@@ -1785,6 +1814,7 @@ int validateAccept(char **req, Node *n )
                     ind+=1;
             }
         } 
+
     } while (res);
 
     return 1;
@@ -1815,29 +1845,39 @@ int validateAcceptStr(char **req, Node *n )
 //  ( "*/*" / ( type "/" subtype ) / ( type "/*" ) ) * ( OWS ";" OWS parameter )
 int validateMediaRange(char **req, Node *n)
 {
-    int ind = 0;
+    int ind = 0, backupLen;
+    char *backup;
     n->start = *req;
 
     // "*/*"
+    backup = *req;
+    backupLen = n->len;
     addChild(n, "*");
     addChild(n, "/");
     addChild(n, "*");
     if (!validateChildren(req, n))
     {
+
         // ( type "/" subtype )
         deleteChildren(n);
+        *req = backup;
+        n->len = backupLen;
         addChild(n, "type");
         addChild(n, "/");
         addChild(n, "subtype");
         if (!validateChildren(req, n))
         {
             // ( type "/*" ) 
+            *req = backup;
+            n->len = backupLen;
             deleteChildren(n);
             addChild(n, "type");
             addChild(n, "/");
             addChild(n, "*");
             if (!validateChildren(req, n))
             {
+                *req = backup;
+                n->len = backupLen;
                 deleteChildren(n);
                 return 0;
             }
@@ -1853,18 +1893,28 @@ int validateMediaRange(char **req, Node *n)
         ind += 3;
 
     // * ( OWS ";" OWS parameter )
+
     addChild(n, "OWS");
     addChild(n, ";");
     addChild(n, "OWS");
     addChild(n, "parameter");
+    backup = *req;
+    backupLen = n->len;
     while (validateChildrenStartingFrom(req, n, ind))
     {
+        backup = *req;
+        backupLen = n->len;
         ind += 4;
         addChild(n, "OWS");
         addChild(n, ";");
         addChild(n, "OWS");
         addChild(n, "parameter");
     }
+    *req = backup;
+    n->len = backupLen;
+    deleteChildrenFromIndex(n, ind);
+
+
     return 1;
 }
 
@@ -1920,6 +1970,7 @@ int validateParameter(char **req, Node *n)
             return 0;
         }
     }
+
     return 1;
 }
 
@@ -1950,7 +2001,10 @@ int validateQuotedString(char **req, Node *n)
                 res = 0;
             }
             else
+            {
+                res = 1;
                 ind++;
+            }
         }
         else
             ind++;
@@ -1986,14 +2040,17 @@ int validateQdText(char **req, Node *n)
 int validateQuotedPair(char **req, Node *n)
 {
     unsigned char ureq;
+
     n->start = *req;
     if (**req != '\\')
         return 0;
     n->len++;
     (*req)++;
+
     ureq = (unsigned char)**req;
     if (ureq == '\t' || ureq == ' ' || (ureq >= 33 && ureq <= 126) || (ureq >= 128 && ureq <= 255))
     {
+        (*req)++;
         n->len++;
         return 1;
     }
@@ -2227,8 +2284,9 @@ int validateConnectionStr(char **req, Node * n)
 // * ( "," OWS ) connection-option * ( OWS "," [ OWS connection-option ] )
 int validateConnection(char **req, Node * n)
 {
-    int ind = 0, res = 1;
+    int ind = 0, res = 1, backupLen;
     n->start = *req;
+    char *backup;
     
     addChild(n, ",");
     addChild(n, "OWS");
@@ -2247,7 +2305,6 @@ int validateConnection(char **req, Node * n)
         return 0;
     }
     ind++;
-
     do
     {
         addChild(n, "OWS");
@@ -2259,11 +2316,21 @@ int validateConnection(char **req, Node * n)
         }
         else
         {
+            backup = *req;
+            backupLen = n->len;
             ind+= 2;
             addChild(n, "OWS");
             addChild(n, "connection-option");
             if (!validateChildrenStartingFrom(req, n, ind))
+            {
                 deleteChildrenFromIndex(n, ind);
+                *req = backup;
+                n->len = backupLen;
+            }
+            else
+            {
+                ind+=2;
+            }
         }
 
 
@@ -2344,6 +2411,7 @@ int validateContentLength(char **req, Node * n)
 int validateContentTypeHeader(char **req, Node * n)
 {
     n->start = *req;
+
     addChild(n, "content-type-str");
     addChild(n, ":");
     addChild(n, "OWS");
@@ -2439,6 +2507,7 @@ int validateTransferEncodingHeader(char **req, Node * n)
         deleteChildren(n);
         return 0;
     }
+
     return 1;
 }
 
@@ -2467,6 +2536,9 @@ int validateTransferEncoding(char **req, Node * n)
     int ind = 0, res = 1;
     n->start = *req;
 
+    int backupLen;
+    char *backup;
+
     addChild(n, ",");
     addChild(n, "OWS");
     while (validateChildrenStartingFrom(req, n, ind))
@@ -2486,11 +2558,15 @@ int validateTransferEncoding(char **req, Node * n)
     ind++;
     do
     {
+        backup = *req;
+        backupLen = n->len;
         addChild(n, "OWS");
         addChild(n, ",");
         if (!validateChildrenStartingFrom(req, n, ind))
         {
             deleteChildrenFromIndex(n, ind);
+            *req = backup;
+            n->len = backupLen;
             res = 0;
         }
         else
@@ -2518,6 +2594,7 @@ int validateTransferCoding(char **req, Node * n)
     if (!readString(req, "chunked"))
     {
         n->len = 0;
+        *req = n->start;
     }
     else
     {
@@ -2528,6 +2605,7 @@ int validateTransferCoding(char **req, Node * n)
     if (!readString(req, "compress"))
     {
         n->len = 0;
+        *req = n->start;
     }
     else
     {
@@ -2538,6 +2616,7 @@ int validateTransferCoding(char **req, Node * n)
     if (!readString(req, "deflate"))
     {
         n->len = 0;
+        *req = n->start;
     }
     else
     {
@@ -2548,13 +2627,14 @@ int validateTransferCoding(char **req, Node * n)
     if (!readString(req, "gzip"))
     {
         n->len = 0;
+        *req = n->start;
     }
     else
     {
         n->len = strlen("gzip");
         return 1;
     }
-    
+
     addChild(n, "transfer-extension");
     if (!validateChildrenStartingFrom(req, n, 0))
     {
@@ -2574,15 +2654,18 @@ int validateTransferExtension(char **req, Node * n)
     if (!validateChildren(req, n))
     {
         deleteChildren(n);
+        *req = n->start;
         return 0;
     }
     ind++;
+
     addChild(n, "OWS");
     addChild(n, ";");
     addChild(n, "OWS");
     addChild(n, "transfer-parameter");
     while (validateChildrenStartingFrom(req, n, ind))
     {
+
         ind += 4;
         addChild(n, "OWS");
         addChild(n, ";");
@@ -2640,6 +2723,7 @@ int validateHostHeader(char **req, Node * n)
         deleteChildren(n);
         return 0;
     }
+    
     return 1;
 }
 
@@ -2722,7 +2806,7 @@ int validateAcceptCharsetStr(char **req, Node *n )
 //  * ( "," OWS ) ( ( charset / "*" ) [ weight ] ) * ( OWS "," [ OWS ( ( charset / "*" ) [ weight ] ) ] )
 int validateAcceptCharset(char **req, Node *n)
 {
-    int ind = 0, res = 0;
+    int ind = 0, res = 0, ok = 0;
     n->start = *req;
     // * ( "," OWS ) 
     addChild(n, ",");
@@ -2754,7 +2838,9 @@ int validateAcceptCharset(char **req, Node *n)
     addChild(n, "weight");
     if (!validateChildrenStartingFrom(req, n, ind))
         deleteChildrenFromIndex(n, ind);
-    
+    else
+        ind++;
+
     // * ( OWS "," [ OWS ( ( charset / "*" ) [ weight ] ) ] )
     res = 1;
     do
@@ -2764,11 +2850,11 @@ int validateAcceptCharset(char **req, Node *n)
         if (validateChildrenStartingFrom(req, n, ind))
         {
             ind+=2;
+            res = 1;
             addChild(n, "OWS");
             if (!validateChildrenStartingFrom(req, n, ind))
             {
                 deleteChildrenFromIndex(n, ind);
-                res = 0;
             }
             else
             {
@@ -2781,29 +2867,36 @@ int validateAcceptCharset(char **req, Node *n)
                     if (!validateChildrenStartingFrom(req, n, ind))
                     {
                         deleteChildrenFromIndex(n, ind);
-                        res = 0;
                     }
                     else
                     {
                         ind++;
-                        
+                        ok = 1;
                     }
 
                 }
                 else
-                    ind++;
-                addChild(n, "weight");
-                if (!validateChildrenStartingFrom(req, n, ind))
                 {
-                    deleteChildrenFromIndex(n, ind);
-                }
-                else
                     ind++;
+                    ok = 1;
+                }
+                if (ok)
+                {
+                    addChild(n, "weight");
+                    if (!validateChildrenStartingFrom(req, n, ind))
+                    {
+                        deleteChildrenFromIndex(n, ind);
+                    }
+                    else
+                        ind++;
+                    ok = 0;
+                }
             }
         }
         else
             res = 0;
     } while (res);
+
     return 1;
 
 }
@@ -2835,6 +2928,7 @@ int validateAcceptLanguageHeader(char **req, Node * n)
         deleteChildren(n);
         return 0;
     }
+
     return 1;
 }
 
@@ -2935,11 +3029,15 @@ int validateAcceptLanguage(char **req, Node *n )
         return 0;
     }
     else
+    {
         ind++;
-    addChild(n, "weight");
-    if (!validateChildrenStartingFrom(req, n, ind))
-        deleteChildrenFromIndex(n, ind);
-    
+        addChild(n, "weight");
+        if (!validateChildrenStartingFrom(req, n, ind))
+            deleteChildrenFromIndex(n, ind);
+        else
+            ind++;
+    }
+
     // * ( OWS "," [ OWS ( language-range [ weight ] ) ] )
     res = 1;
     do
@@ -2953,7 +3051,6 @@ int validateAcceptLanguage(char **req, Node *n )
             if (!validateChildrenStartingFrom(req, n, ind))
             {
                 deleteChildrenFromIndex(n, ind);
-                res = 0;
             }
             else
             {
@@ -2962,17 +3059,18 @@ int validateAcceptLanguage(char **req, Node *n )
                 if (!validateChildrenStartingFrom(req, n, ind))
                 {
                     deleteChildrenFromIndex(n, ind);
-                    res = 0;
                 }
                 else
-                    ind++;
-                addChild(n, "weight");
-                if (!validateChildrenStartingFrom(req, n, ind))
                 {
-                    deleteChildrenFromIndex(n, ind);
-                }
-                else
                     ind++;
+                    addChild(n, "weight");
+                    if (!validateChildrenStartingFrom(req, n, ind))
+                    {
+                        deleteChildrenFromIndex(n, ind);
+                    }
+                    else
+                        ind++;
+                }
             }
         }
         else
@@ -2995,6 +3093,7 @@ int validateAcceptEncodingHeader(char **req, Node * n){
 		deleteChildren(n);
 		return 0;
 	}
+    
 	return 1;
 }
 
@@ -3196,7 +3295,6 @@ int validateUserAgent(char **req, Node *n)
             addChild(n, "comment");
             if (!validateChildrenStartingFrom(req, n, ind))
             {
-                printf("no comment\n");
                 deleteChildrenFromIndex(n, ind);
                 res = 0;
             }
@@ -3377,6 +3475,7 @@ int validateCrlf(char **req, Node *n)
         deleteChildren(n);
         return 0;
     }
+
     return 1;
 }
 
@@ -3398,11 +3497,14 @@ int validateDigit(char **req, Node *n)
 int validateOws(char **req, Node *n)
 {
     n->start = *req;
+    
     while (**req == ' ' || **req == '\t')
     {
         (*req)++;
         n->len++;
     }
+
+
     return 1;
 }
 
@@ -3443,7 +3545,7 @@ int isTchar(char c)
 
 int isFieldVchar(char c)
 {
-    return (c >= 33 && c <= 126) || (c >= 128 && c <= 255);
+    return ((unsigned char)c >= 33 && (unsigned char)c <= 126) || ((unsigned char)c >= 128 && (unsigned char)c <= 255);
 }
 
 
@@ -3530,12 +3632,14 @@ int readPchar(char **req, int *len)
 int validateCharacter(char **req,Node *n, char c)
 {
     n->start = *req;
+
     if (**req == c)
     {
         (*req)++;
         n->len = 1;
         return 1;
     }
+
     return 0;
 }
 
@@ -3545,15 +3649,21 @@ int validateBrothers(char **req, Node *n, int *len)
     int lenRead = 0, tmp;
     Node *it = n;
 
+
+
+
     while (it != NULL)
     {
         if (strlen(it->ruleName) == 1) /* si la rulename est composé d'un seul charactere */
             tmp = validateCharacter(req, it, it->ruleName[0]); /* on tente de lire ce charactere */
         else
             tmp = (getValidationFunction(it)(req, it)); /* sinon on appelle une fonction de validation */
+        
         if (tmp == 1)
         {
             lenRead += it->len;
+            //printf("%s %X: %.32s\n", it->ruleName, (unsigned char)**req, *req);
+
         }
         if (tmp == 0)
         {
@@ -3568,6 +3678,7 @@ int validateBrothers(char **req, Node *n, int *len)
 
 int validateChildren(char **req, Node *n)
 {
+
     return validateChildrenStartingFrom(req, n, 0);
 }
 
@@ -3584,7 +3695,6 @@ int validateChildrenStartingFrom(char **req, Node *n, int start)
         }
         it = it->brother;
     }
-
     res = validateBrothers(req, it, &l);
     n->len += l;
     if (res == 0) /* si la validation échoue */

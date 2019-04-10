@@ -61,5 +61,6 @@ int main(int argc, char *argv[])
         printf("Not valid\n");
         return 0;
     }
+    free(req);
     return 1;
 }
