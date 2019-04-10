@@ -18,3 +18,4 @@ tests/testFile/*
 ### Project related ###
 tree.dot
 tree.pdf
+httpparser

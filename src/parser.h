@@ -55,6 +55,7 @@ int validateChildrenStartingFrom(char **req, Node *n, int start);
 
 int validateRequest(char *req, int len);
 int validateHttpMessage(char **req, Node *n);
+int validateMessageBody(char **req, Node *n);
 int validateStartLine(char **req, Node *n);
 int validateRequestLine(char **req, Node *n);
 int validateMethod(char **req, Node *n);
@@ -65,6 +66,7 @@ int validateSegment(char **req, Node *n);
 int validateQuery(char **req, Node *n);
 int validateHttpVersion(char **req, Node *n);
 int validateSp(char **req, Node *n);
+int validateHtab(char **req, Node *n);
 int validateCrlf(char **req, Node *n);
 int validateDigit(char **req, Node *n);
 int validateCharacter(char **req, Node *n, char c);
@@ -73,6 +75,7 @@ int validateToken(char **req, Node *n);
 
 /* vérifie si le char en argument est un tchar */
 int isTchar(char c);
+int isFieldVchar(char c);
 int isUnreserved(char c);
 int isSubDelims(char c);
 /* tente de lire un pchar dans la requete */
@@ -92,6 +95,10 @@ int validateHierPart(char **req, Node *n);
 
 //tous les header
 int validateHeaderField(char **req, Node *n);
+int validateFieldName(char **req, Node *n);
+int validateFieldValue(char **req, Node *n);
+int validateFieldContent(char **req, Node *n);
+int validateObsFold(char **req, Node *n);
 int validateContentTypeHeader(char **req, Node * n);
 int validateContentTypeHeader(char **req, Node * n);
 int validateTrailerHeader(char **req, Node * n);
