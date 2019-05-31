@@ -1,4 +1,3 @@
-
 Voici la structure choisie pour représenter un noeud de l'arbre:
 ```c
 typedef struct node
@@ -65,8 +64,9 @@ int validateHttpVersion(char **req, Node *n)
     return 1;
 }
 ```
+`**req` désigne le curseur sur la requête à parser, et `n` le noeud que nous cherchons à valider.
 
-La fonction addChild complete la liste chainée de fils du Node n.
+La fonction addChild complète la liste chainée de fils du Node n.
 Ainsi pour valider un noeud, on ajoute tout ses fils, qui seront validés par la méthode  `validateChildren`.
 
 De cette façon, la validation d'un noeud est juste la traduction en code de la grammaire. Toute la gestion des listes chainées, des attributs des noeuds, est cachée dans `validateChildren`.

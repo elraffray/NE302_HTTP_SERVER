@@ -17,8 +17,13 @@ void *getRootTree()
 
 _Token *searchTree(void *start,char *name)
 {
-    Node *tmp, *n = (Node *)start;
+    Node *tmp, *n;
     _Token *tok = NULL, *it, *end;
+
+    if (start == NULL)
+        start = getRootTree();
+
+    n = (Node *)start;
     /* on regarde le noeud courant */
     if (strcmp(n->ruleName, name) == 0)
     {
