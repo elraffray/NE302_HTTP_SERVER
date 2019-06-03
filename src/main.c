@@ -19,6 +19,7 @@ int main(int argc, char *argv[])
 {
     message *requete; 
     char *reponse;
+	int len;
 
 
 	while ( 1 ) {
@@ -31,23 +32,12 @@ int main(int argc, char *argv[])
 		printf("Contenu de la demande %.*s\n\n",requete->len,requete->buf);  
 
 
-        if (parseur(requete->buf, requete->len))
-        {
-            if (semanticCheck(requete->buf))
-            {
-                printf("Request valid.\n");
-            }
-            else
-            {
-                printf("Request not valid.\n");
-            }
-        }
-        else
+        if (!parseur(requete->buf, requete->len))
         {
             printf("Couldn't parse request.\n");
         }
-        reponse = createResponse();
-		writeDirectClient(requete->clientId,reponse,strlen(reponse)); 
+        reponse = createResponse(&len);
+		writeDirectClient(requete->clientId,reponse,len); 
 		//writeDirectClient(requete->clientId,REPONSE2,strlen(REPONSE2)); 
 		endWriteDirectClient(requete->clientId); 
         if (getKeepAlive() == 0)
@@ -56,6 +46,7 @@ int main(int argc, char *argv[])
         freeRequest(requete); 
         free(reponse);
 	}
+    purgeTree(getRootTree);
 	return (1);
 }
 
