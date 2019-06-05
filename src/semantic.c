@@ -2,13 +2,14 @@
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <sys/stat.h> 
 #include "semantic.h"
 #include "api.h"
 #include "parser.h"
 
 
 
-char methods[][10] = {"GET", "HEAD", "POST", "PUT", "startETE", "CONNECT", "OPTIONS", "TRACE"};
+char methods[][10] = {"GET", "HEAD", "POST", "PUT", "DELETE", "CONNECT", "OPTIONS", "TRACE"};
 int nbMethods = 8;
 char max_version[10] = "";
 int keep_alive = 1;
@@ -17,8 +18,6 @@ QStruct qvalues[MAX_QVALUES];
 int nbQvalues;
 
 char *uri;
-
-
 
 
 int cmpMimetype(const void *a, const void *b)
@@ -30,7 +29,6 @@ int cmpMimetype(const void *a, const void *b)
     //sinon on met les type le plus spécifique en premier (7231 5.3.2)
     return strlen((*(QStruct *)b).name) - strlen((*(QStruct *)a).name);
 }
-
 
 
 //compare les qname en fonction de leur valeur 
@@ -217,7 +215,7 @@ char *encodeBody(char *encoding, int *len)
     char *body;
     int i;
 
-    body = getFileContent(uri+1, len);
+    body = getFileContent(uri, len);
     if (body == NULL)
         return NULL;
 
@@ -439,6 +437,7 @@ char *getResponseVersion()
 {
     _Token* res;
     int len;
+    float ver;
     char *val, tmp[2], *pch;
 
     if (strlen(max_version) <= 1)
@@ -446,6 +445,7 @@ char *getResponseVersion()
         strcat(max_version, "HTTP/");
         sprintf(tmp,"%d",MAX_MAJOR_VERSION);
         strcat(max_version, tmp);
+        strcat(max_version, ".");
         sprintf(tmp,"%d",MAX_MINOR_VERSION);
         strcat(max_version, tmp);
     }
@@ -464,13 +464,8 @@ char *getResponseVersion()
         {
             return "HTTP/1.0";
         }
-        pch = strtok(val, "HTTP/.");
-        if (atoi(pch) > MAX_MAJOR_VERSION) // on regarde la version majeure de la requete
-        {
-            return max_version;
-        }
-        pch = strtok(NULL, "HTTP/.");
-        if (atoi(pch) > MAX_MINOR_VERSION) // on regarde la version mineure de la requete
+        ver = atof(val+5);
+        if (ver > (float)(MAX_MAJOR_VERSION + 0.1*MAX_MINOR_VERSION))
         {
             return max_version;
         }
@@ -481,7 +476,7 @@ char *getResponseVersion()
 char *getStatusCode()
 {
     _Token* res, *it;
-    int len, i ,ind;
+    int len, i ,ind = -1;
     char *val, *pch, *tmp, *tmp2;
 
     // requete HTTP/1.1 doit avoir un Host-header
@@ -494,13 +489,31 @@ char *getStatusCode()
 
         if (strcmp(val, "HTTP/1.1") == 0)
         {
+            //si aucun header Host
             if ((res = searchTree(NULL, "Host-header")) == NULL)
+            {
+                purgeElement(&res);
+                return "400 Bad Request";
+            }
+            //si plusieurs header Host
+            else if (res->next != NULL)
             {
                 purgeElement(&res);
                 return "400 Bad Request";
             }
             purgeElement(&res);
         }
+        else if ((res = searchTree(NULL, "Host-header")) != NULL)
+        {
+            if (res->next != NULL)
+            {
+                purgeElement(&res);
+                return "400 Bad Request";
+            }
+            purgeElement(&res);
+        }
+        
+
         pch = strtok(val, "HTTP/.");
         if (atoi(pch) > MAX_MAJOR_VERSION) // on regarde la version majeure de la requete
         {
@@ -537,7 +550,8 @@ char *getStatusCode()
                 return "400 Bad Request";
             }
             break;
-        
+        case -1:
+            return "501 Not Implemented";
         default:
             break;
     }
@@ -578,7 +592,7 @@ char *getStatusCode()
 
 
     // Si uri non trouvée
-    if (access(uri+1, R_OK) == -1)
+    if (access(uri, R_OK) == -1)
     {
         return "404 Not Found";
     }
@@ -589,11 +603,18 @@ char *getStatusCode()
     return "200 OK";
 }
 
+int isDirectory(const char *path) {
+   struct stat statbuf;
+   if (stat(path, &statbuf) != 0)
+       return 0;
+   return S_ISDIR(statbuf.st_mode);
+}
+
 char *getFileContent(char *filename, int *len)
 {
     char * buffer = 0;
     long length;
-    printf("target-file: %s\n", filename);
+    
 
     if (access(filename, R_OK) == -1)
     {
@@ -623,10 +644,9 @@ char *getFileContent(char *filename, int *len)
 
     if (buffer)
     {
-        printf("URI FOUND: %s\n", filename);
+        printf("FILE FOUND: %s\n", filename);
         return buffer;
     }
-
     return NULL;
 }
 
@@ -634,15 +654,31 @@ char *getFileContent(char *filename, int *len)
 
 char *createResponse(int *length)
 {
-    char *response, *version, *statusCode, headers[256] = "", *body, tmp[16];
+    char *response, *version, *statusCode, headers[256] = "", *body = NULL, tmp[16], *pch, *tmp2;
     char *contenttype, encoding[16];
-    int len = 0, bodyLen = 0;
+    int len = 0, bodyLen = 0, code;
 
     decodeUri();
 
-    body = encodeBody(encoding, &bodyLen);
+    tmp2 = getStatusCode();
+    statusCode = (char *)malloc(strlen(tmp2));
+    if (statusCode == NULL)
+        exit(1);
+    strcpy(statusCode, tmp2);
+    
+    printf("CODE: %s\n", statusCode);
+    pch = strtok(statusCode, " ");
+    code = atoi(pch);
+
+    if (code != 400)
+    {
+        body = encodeBody(encoding, &bodyLen);
+        if (body == NULL)
+        {
+            printf("NULL body\n");
+        }
+    }
     version = getResponseVersion();
-    statusCode = getStatusCode();
 
     if (checkConnectionHeader() == 0)
     {
@@ -676,6 +712,7 @@ char *createResponse(int *length)
     response = (char *)malloc(len);
     if (response == NULL)
     {
+        free(statusCode);
         exit(1);
     }
      
@@ -699,8 +736,9 @@ char *createResponse(int *length)
     }
 
     free(uri);
+    free(statusCode);
 
-    //printf("\n############## REPONSE ################\n%s\n\n", response);
+    printf("\n############## REPONSE ################\n%s\n\n", response);
     return response;
     
 }
@@ -716,13 +754,13 @@ void decodeUri()
 {
     _Token* res;
     int len, i, j = 0;
+    char *original, *decoded, *sanitized, tmp, code[3], *realPath;
     res = searchTree(NULL, "request-target");
     if (res == NULL)
     {
         printf("no request-target");
         exit(1);
     }
-    char *original, *decoded, *sanitized, tmp, code[3];
     code[3] = '\0';
     original = getElementValue(res->node, &len);
     purgeElement(&res);
@@ -816,12 +854,30 @@ void decodeUri()
         }
 
     }
-
-    free(decoded);
     sanitized[j] = '\0';
-    uri = sanitized;
 
+    realPath = (char *)malloc(strlen(sanitized) + strlen(ROOT_DIR) + strlen("index.html") + 2);
+    if (realPath == NULL)
+        exit(1);
+    strcpy(realPath, ROOT_DIR);
+    strcat(realPath, sanitized);
 
+    printf("RPATH: %s\n", realPath);
+    //defaults to index.html
+    if (isDirectory(realPath) || realPath[strlen(realPath) - 1] == '/')
+    {
+        printf("DIR\n");
+        if (realPath[strlen(realPath) - 1] != '/')
+            strcat(realPath, "/");
+        strcat(realPath, "index.html");
+    }
+    else
+        printf("NOT DIR\n");
+
+    printf("path: %s\n", realPath);
+    free(decoded);
+    free(sanitized);
+    uri = realPath;
 }
 
 
@@ -834,10 +890,10 @@ int checkConnectionHeader()
     res = searchTree(NULL, "HTTP-version");
     if (res != NULL)
     {
-        if (strcmp(getElementValue(res->node, &len), "HTTP/1.1") == 0)
+        if (strcmp(getElementValue(res->node, &len), "HTTP/1.1") == 0 || atof(getElementValue(res->node, &len) + 5) > 1.1)
         {
             purgeElement(&res);
-            if ((res = searchTree(NULL, "Connection")) == NULL)
+            if ((res = searchTree(NULL, "Connection")) != NULL)
             {
                 if (strcmp(getElementValue(res->node, &len), "close") == 0)
                 {
@@ -851,7 +907,7 @@ int checkConnectionHeader()
         else if (strcmp(getElementValue(res->node, &len), "HTTP/1.0") == 0)
         {
             purgeElement(&res);
-            if ((res = searchTree(NULL, "Connection")) == NULL)
+            if ((res = searchTree(NULL, "Connection")) != NULL)
             {
                 if (strcmp(getElementValue(res->node, &len), "keep-alive") == 0)
                 {
@@ -859,10 +915,13 @@ int checkConnectionHeader()
                     purgeElement(&res);
                     return 1;
                 }
+                keep_alive = 0;
                 purgeElement(&res);
+                return 0;
             }
         }
         purgeElement(&res);
+        
 
     }
     keep_alive = 1;

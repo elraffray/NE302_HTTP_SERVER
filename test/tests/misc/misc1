@@ -1,0 +1,3 @@
+GET / HTTP/1.0
+
+This is a playload...

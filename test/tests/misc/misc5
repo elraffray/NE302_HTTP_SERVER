@@ -1,0 +1,3 @@
+GET /index.gif HTTP/1.0
+Accept: text/*
+

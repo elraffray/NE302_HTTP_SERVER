@@ -1,0 +1,3 @@
+GET /dir HTTP/1.0
+Host: www.toto.com
+

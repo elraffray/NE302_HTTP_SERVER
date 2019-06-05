@@ -1,0 +1,25 @@
+HTTP/1.0 200 OK
+Content-Length: 401
+
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="styles.css">
+    <title>Page Title</title>
+</head>
+<body>
+
+<h1>This is a Heading</h1>
+<p>This is a paragraph.</p>
+
+<p>This is the best man in the world.</p>
+<img src="postel.jpg" alt="Good man" height="42" width="42">
+
+
+<p id="demo"></p>
+
+<script>
+document.getElementById("demo").innerHTML = "Hello JavaScript!";
+</script>
+</body>
+</html>

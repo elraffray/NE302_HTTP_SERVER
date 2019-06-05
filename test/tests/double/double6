@@ -1,0 +1,9 @@
+GET / HTTP/1.0
+Host: www.toto.com
+Cookie: test=test
+Referer: http://www.toto.com/
+Accept-Encoding: gzip, deflate
+Accept: text/html;q=0.9,*/*;q=0.8
+User-Agent: Mozilla/5.0
+Cookie: test=test
+

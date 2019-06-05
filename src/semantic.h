@@ -9,6 +9,8 @@ extern int nbMethods;
 #define MAX_MINOR_VERSION 1
 #define MAX_QVALUES 10
 
+#define ROOT_DIR "www"
+
 typedef struct qStruct {
     char name[32];
     float value;
@@ -28,9 +30,7 @@ int setAcceptQValuesFrom(char *rulename);
 int getKeepAlive();
 char *getUri();
 
-
 char *decodeChunked(char *data);
-
 
 // utilise le transfer-encoding pour decoder le body de la request
 char *decodeBody();
