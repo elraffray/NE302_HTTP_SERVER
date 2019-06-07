@@ -1,0 +1,1 @@
+Bonjour <?php echo($_POST['name']) ?>, tu as <?php echo($_POST['age']) ?> ans.

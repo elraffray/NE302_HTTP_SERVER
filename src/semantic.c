@@ -6,14 +6,14 @@
 #include "semantic.h"
 #include "api.h"
 #include "parser.h"
-
+#include "fcgiHandler.h"
 
 
 char methods[][10] = {"GET", "HEAD", "POST", "PUT", "DELETE", "CONNECT", "OPTIONS", "TRACE"};
 int nbMethods = 8;
 char max_version[10] = "";
 int keep_alive = 1;
-
+int cgi = 0;
 QStruct qvalues[MAX_QVALUES];
 int nbQvalues;
 
@@ -214,8 +214,21 @@ char *encodeBody(char *encoding, int *len)
 {
     char *body;
     int i;
+    char *mime;
+    mime = getMimeData(uri);
 
-    body = getFileContent(uri, len);
+    if (mime == NULL)
+        return NULL;
+
+    if (strcmp(uri+strlen(uri) - 3, "php") == 0)
+    {
+        printf("FCGI\n");
+        cgi = 1;
+        body = execute(uri, len);
+    }
+    else
+        body = getFileContent(uri, len);
+    free(mime);
     if (body == NULL)
         return NULL;
 
@@ -438,7 +451,7 @@ char *getResponseVersion()
     _Token* res;
     int len;
     float ver;
-    char *val, tmp[2], *pch;
+    char *val, tmp[2];
 
     if (strlen(max_version) <= 1)
     {
@@ -551,8 +564,12 @@ char *getStatusCode()
             }
             break;
         case -1:
+            if (res != NULL)
+                purgeElement(&res);
             return "501 Not Implemented";
         default:
+            if (res != NULL)
+                purgeElement(&res);
             break;
     }
 
@@ -665,11 +682,12 @@ char *createResponse(int *length)
     if (statusCode == NULL)
         exit(1);
     strcpy(statusCode, tmp2);
+
     
     printf("CODE: %s\n", statusCode);
     pch = strtok(statusCode, " ");
     code = atoi(pch);
-
+    *strchr(statusCode, '\0') = ' ';
     if (code != 400)
     {
         body = encodeBody(encoding, &bodyLen);
@@ -725,12 +743,13 @@ char *createResponse(int *length)
     if (strlen(headers) > 1)
         strcat(response, headers);
 
-
-    strcat(response, "\r\n");
+    if (cgi == 0)
+        strcat(response, "\r\n");
     *length = strlen(response) + bodyLen;
+    printf("RESPONSE: %s\n", response);
     if (body != NULL)
     {
-        //strcat(response, body);
+        printf("BODY: %s\n", body);
         memcpy(response + strlen(response) ,body, bodyLen);
         free(body);
     }
@@ -739,6 +758,7 @@ char *createResponse(int *length)
     free(statusCode);
 
     printf("\n############## REPONSE ################\n%s\n\n", response);
+    cgi = 0;
     return response;
     
 }

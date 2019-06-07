@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+  <head>
+      <link rel="stylesheet" href="styles.css">
+      <title>D&eacute;mo serveur</title>
+  </head>
+<body>
+
+<h2>Zone de test</h2>
+
+
+<div class="demo" id="form">
+  <h3>Formulaire</h3>
+  <div class="content">
+    <form action="/action_page.php" method="post">
+      Nom:<br>
+      <input type="text" name="name" placeholder="Entrez votre nom ici">
+      <br>
+      Age:<br>
+      <input type="text" name="age" placeholder="Entrez votre &acirc;ge ici">
+      <br>
+      <input id="sub" type="submit" value="Submit">  
+    </form> 
+  </div>
+</div>
+
+<div class="demo" id="js">
+  <h3>Javascript</h3>
+  <div class="content">
+    <p id="js-target" onclick="changeColor()">Cliquez-moi !</p>
+  </div>
+</div> 
+
+<div class="demo" id="images">
+    <h3>Images</h3>
+    <div class="content">
+      <img src="postel.jpg" alt="Good man" height="200" width="200">
+      <img id="lenna" src="lenna.png" alt="Good man" height="200" width="200">
+    </div>
+  </div> 
+
+<script>
+  var color = "#BF360C"
+  function changeColor() {
+    document.getElementById("js-target").style.backgroundColor = color
+    if (color == "#BF360C") {
+      color = "#558B2F"
+    }
+    else if (color == "#558B2F") {
+      color = "#1976D2"
+    }
+    else if (color == "#1976D2") {
+      color = "#558B2F"
+    }
+
+  }
+</script>
+
+</body>
+</html>

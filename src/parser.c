@@ -34,6 +34,7 @@ void initNode(Node *slot, char *name)
     slot->len = 0;
     slot->start = NULL;
     slot->value = NULL;
+
 }
 
 /* ajoute un fils en queue de la liste de fils de n */
@@ -135,6 +136,7 @@ int validateHttpMessage(char **req, Node *n)
 {
     int ind = 0;
     n->start = *req;
+    Node *it;
 
     addChild(n, "start-line");
     if (!validateChildren(req, n))
@@ -162,7 +164,15 @@ int validateHttpMessage(char **req, Node *n)
         return 0;
     }
     ind++;
-    // addChild(n, "message-body");
+    if (**req != '\0')
+    {
+        addChild(n, "message-body");
+        it = n->child;
+        while (it->brother != NULL) it = it->brother;
+        it->start = *req;
+        it->len = strlen(*req);
+    }
+
     // if (!validateChildrenStartingFrom(req, n, ind))
     //     deleteChildrenFromIndex(n, ind);
     return 1;
@@ -381,7 +391,6 @@ int validateHeaderField(char **req, Node *n)
         addChild(n, headers[i]);
         if (validateChildren(req, n))
         {
-
             return 1;
         }
         deleteChildren(n);

@@ -7,6 +7,10 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+
+
 #include "fastcgi.h" 
 
 // =========================================================================================================== // 
@@ -25,6 +29,7 @@ void writeSocket(int fd,FCGI_Header *h,unsigned int len)
 		} while (w == -1 && errno == EINTR);
 	len-=w; 
 	}
+
 } 
 
 // =========================================================================================================== // 
@@ -136,7 +141,7 @@ static int createSocket(int port)
 	bzero(&serv_addr, sizeof(serv_addr));
 
 	serv_addr.sin_family = AF_INET;
-	inet_aton("127.0.0.1",serv_addr.sin_addr.s_addr);
+	inet_aton("127.0.0.1",&(serv_addr.sin_addr));
 	serv_addr.sin_port = htons(port);
 
 	if (connect(fd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
@@ -147,13 +152,13 @@ static int createSocket(int port)
 	return fd;
 }
 // =========================================================================================================== // 
-int main(int argc,char *argv[])
-{
-	int fd; 
-	fd=createSocket(9000); 
-	sendGetValue(fd); 
-	sendBeginRequest(fd,10,FCGI_RESPONDER,FCGI_KEEP_CONN); 
-	sendStdin(fd,10,argv[1],strlen(argv[1])); 
-	sendData(fd,10,argv[1],strlen(argv[1])); 
-}
+// int main(int argc,char *argv[])
+// {
+// 	int fd; 
+// 	fd=createSocket(9000); 
+// 	sendGetValue(fd); 
+// 	sendBeginRequest(fd,10,FCGI_RESPONDER,FCGI_KEEP_CONN); 
+// 	sendStdin(fd,10,argv[1],strlen(argv[1])); 
+// 	sendData(fd,10,argv[1],strlen(argv[1])); 
+// }
 

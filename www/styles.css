@@ -1,0 +1,86 @@
+body {
+    overflow: hidden;
+}
+
+.demo {
+    background-color: lightgray;
+    width: 30vw;
+    border: 0px solid gray;
+    padding: 0;
+    color: white;
+    margin-left: 10px;
+}
+
+.content {
+    padding: 10px 10px 10px;
+}
+
+.demo h3 {
+    margin: 0;
+    padding: 5px;
+    width: 100%;
+    box-sizing: border-box;
+
+    
+}
+
+input {
+    padding: 3px;
+}
+
+h2 {
+    background-color:#03A9F4;
+    width: 100vw;
+    margin: -8px -8px 20px -8px;
+    padding: 10px 10px 10px 10px;
+    color: white;
+
+}
+
+#form h3 {
+    background-color: #4CAF50;
+}
+
+#form .content {
+    background-color: #81C784;
+    color: black;
+}
+
+#sub {
+    margin-top: 10px;
+}
+
+
+#js {
+    margin-top: 10px;
+}
+
+#js h3 {
+    background-color: #FFC107;
+}
+
+#js .content {
+    background-color: #FFD54F;
+    color: black;
+}
+
+#js-target {
+    padding: 5px;
+}
+
+
+#images h3 {
+    background-color: #f44336;
+}
+
+#images {
+    margin-top: 10px;
+}
+
+#images .content {
+    background-color: #e57373;
+}
+
+#lenna {
+    float: right;
+}

@@ -1,5 +1,7 @@
 {
     "files.associations": {
-        "parser.h": "c"
+        "parser.h": "c",
+        "socket.h": "c",
+        "fcgihandler.h": "c"
     }
 }
